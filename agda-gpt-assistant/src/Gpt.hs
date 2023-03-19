@@ -5,9 +5,14 @@ module Gpt where
 import Data.Aeson as A 
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
+import System.Process as SP
+import Data.List as L
 
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Data.Text as T
+import System.Exit
+import System.FilePath (splitFileName)
 
 -- GPT API endpoint
 gptApiUrl :: String
@@ -36,13 +41,13 @@ encodePrompt :: String -> BL.ByteString
 encodePrompt prompt = encode (A.object ["model" .= prompt, "max_tokens" .= (50 :: Int)])
 
 -- Make a request to the GPT API and print the response
-interactWithGpt :: String -> IO ()
+interactWithGpt :: String -> IO String
 interactWithGpt prompt = do
   manager <- newManager tlsManagerSettings
   request <- return (createGptRequest prompt)
   response <- httpLbs request manager
-  putStrLn $ "Status: " ++ (show $ responseStatus response)
-  putStrLn $ "Response: " ++ (decodeFunction $ responseBody response)
+  -- putStrLn $ "Status: " ++ (show $ responseStatus response)
+  return  $ (decodeFunction $ responseBody response)
 
 decodeFunction :: BL.ByteString -> String
 decodeFunction r = case ((A.decode r ):: Maybe ChatCompletion ) of
@@ -50,7 +55,7 @@ decodeFunction r = case ((A.decode r ):: Maybe ChatCompletion ) of
                      Just x -> retriveMsg x
 
 retriveMsg :: ChatCompletion -> String
-retriveMsg cc = content $ message $ head $ choices cc
+retriveMsg cc = content $ message $ Prelude.head $ choices cc
        
     
   
@@ -115,3 +120,53 @@ instance FromJSON Message where
     parseJSON = withObject "Message" $ \v -> Message
         <$> v .: "role"
         <*> v .: "content"
+
+
+tryToCompile :: FilePath -> IO (Maybe String)
+tryToCompile fp = do
+  let (path, file) =  splitFileName fp
+  aReq <- runProcess_ path file
+  let ret = case aReq of
+              Nothing -> Nothing
+              Just re -> Just $ removeSubstring path $ removeSubstring path re
+  return ret 
+
+                 
+removeSubstring :: String -> String -> String
+removeSubstring substr str = go str
+  where go [] = []
+        go s@(x:xs)
+          | substr `L.isPrefixOf` s = L.drop (L.length substr) s
+          | otherwise = x : go xs
+
+
+runProcess_ ::  FilePath -> String -> IO (Maybe String)
+runProcess_ pwd afile = do
+  let cp = shell $ "/home/kryn/.cabal/bin/agda" ++ " " ++ afile
+      ncp = cp { cwd = Just pwd
+               , std_out = CreatePipe
+               , std_err = CreatePipe
+               }            
+  (code, output, errorOutput) <- readCreateProcessWithExitCode ncp ""
+  let result = case code of
+                  ExitSuccess   -> Nothing
+                  ExitFailure _ -> Just output
+  return result
+  
+
+x :: IO ()
+x = do
+  x <-tryToCompile  "/home/kryn/agda-gpt-assistant/agda-gpt-assistant/data/Ok.agda"
+  let s =  case x of
+           Nothing -> "OK"
+           Just k -> k
+  putStrLn s
+
+
+x2 :: IO ()
+x2 = do
+  x <-tryToCompile  "/home/kryn/agda-gpt-assistant/agda-gpt-assistant/data/Bad.agda"
+  let s =  case x of
+           Nothing -> "OK"
+           Just k -> k
+  putStrLn s

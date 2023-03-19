@@ -25,6 +25,10 @@ dependencies:
 - bytestring
 - http-client
 - http-client-tls
+- scotty
+- text
+- process
+- filepath
 
 ghc-options:
 - -Wall
