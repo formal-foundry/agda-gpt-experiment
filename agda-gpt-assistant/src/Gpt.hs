@@ -1,5 +1,3 @@
-
-
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-unused-matches #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
@@ -27,7 +25,7 @@ import System.Console.ANSI
 
 
 import Data.List.Split 
-import Text.Regex.Posix as RP 
+-- import Text.Regex.Posix as RP 
 
 
 import Network.HTTP.Client
@@ -95,7 +93,6 @@ instance FromJSON Message where
 decodeRes :: BL.ByteString -> Text
 decodeRes r = case ((A.decode r ):: Maybe ChatCompletion ) of
                      Nothing -> "Nothing"
-                     -- Just x -> "de"
                      Just x -> content $ message $ Prelude.head $ choices x
 
 
@@ -107,15 +104,6 @@ encodeReq msg = encode $
                                      ]
                            ]
            ]
-
-
--- GPT API endpoint
--- gptApiUrl :: String
--- gptApiUrl = undedefined
-
--- Your API key
--- apiKey___ :: B.ByteString
--- apiKey___ = "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"
 
 -- Create a request to the GPT API
 createGptRequest :: String -> String -> Request
@@ -131,22 +119,18 @@ createGptRequest prompt key = request
       , requestBody = RequestBodyLBS (encodeReq prompt)
       }
 
-gptConv :: String -> String -> IO String
+gptConv :: String -> String -> IO (String, String)
 gptConv prompt key = do
   manager <- newManager tlsManagerSettings
   request <- return (createGptRequest prompt key)
   response <- httpLbs request manager
-  -- putStrLn "###############################"
-  putStrLn $ show $ decodeRes $ responseBody response
-  putStrLn "################################"
-  putStr $ show $ L.length $ extractCode $ unpack (decodeRes $ responseBody response)
-  putStrLn "################################"
-  putStrLn $ L.concat $ extractCode $ unpack (decodeRes $ responseBody response)
-  -- putStrLn "###############################"
-  -- return  $ L.concat $ extractCode (decodeRes $ responseBody response)
-  return "test retunr"
+  return $  (plainCode  (decodeRes $ responseBody response),
+             (unpack (  decodeRes $ responseBody response)))
 
--- Extract code block from GPT answ
+
+plainCode :: Text -> String
+plainCode res = rmSubS "Agda" (rmSubS "agda" (L.concat $ extractCode (unpack res)))
+
 
 extractCode :: String -> [String]
 extractCode str = extractCodeBlocks' str []
@@ -164,16 +148,15 @@ extractCode str = extractCodeBlocks' str []
 
 
 
-
-
+-- usunięcie części string                  
+rmSubS :: String -> String -> String
+rmSubS substr str = go str
+  where go [] = []
+        go s@(x:xs)
+          | substr `L.isPrefixOf` s = L.drop (L.length substr) s
+          | otherwise = x : go xs
 
 -- ____________ ########## koniec połączenia z chatem GPTTT####
--- interactWithGpt :: String -> IO String
--- interactWithGpt prompt = do
---   manager <- newManager tlsManagerSettings
---   request <- return (createGptRequest prompt)
---   response <- httpLbs request manager
---   return  $ (decodeRes $ responseBody response)
 
 
 tryToCompile :: FilePath -> IO (Maybe String)
@@ -182,16 +165,8 @@ tryToCompile fp = do
   aReq <- runProcess_ path file
   let ret = case aReq of
               Nothing -> Nothing
-              Just re -> Just $ rmAgdaErrSubS path $ rmAgdaErrSubS path re
+              Just re -> Just $ rmSubS path $ rmSubS path re
   return ret 
-
--- usunięcie  dodatkowych adresów z błędu agdy                 
-rmAgdaErrSubS :: String -> String -> String
-rmAgdaErrSubS substr str = go str
-  where go [] = []
-        go s@(x:xs)
-          | substr `L.isPrefixOf` s = L.drop (L.length substr) s
-          | otherwise = x : go xs
 
 
 runProcess_ ::  FilePath -> String -> IO (Maybe String)
@@ -208,24 +183,40 @@ runProcess_ pwd afile = do
   return result
   
 -- -----------------------------------------------
-debugMode :: AGMonad String
+--     , agdaFileName :: FilePath
+--     , agdaFilesDir :: FilePath
+catFile :: AGEnv -> IO ()
+catFile env = do
+  system $ "cat " ++(agdaFilesDir env ) ++ "bak/" ++ (agdaFileName env) ++ ".bak" ++ " " ++ (agdaFilesDir env )  ++ (agdaFileName env)
+  return ()
+
+debugMode :: AGMonad (Maybe String)
 debugMode = do
   env <- ask
-  fcon <- liftIO $ fConvInput env
-  liftIO $ putStrLn fcon
-  answareFromGPT <- liftIO $ gptConv fcon (apiKey env)
-  liftIO $ putStrLn answareFromGPT
-  return "end debugMode func"
+  a <- get
+  let agdaFile = (agdaFilesDir env) ++ (agdaFileName env)
+  if L.length a < 10
+  then
+    do
+      liftIO $ catFile env
+      fcon <- liftIO $ fConvInput env
+      liftIO $ putStrLn fcon
+      answareFromGPT <- liftIO $ gptConv fcon (apiKey env)
+      liftIO $ putStrLn $ fst answareFromGPT
+      liftIO $ appendFile agdaFile (fst answareFromGPT)
+      compiler <- liftIO $ tryToCompile agdaFile 
+      case compiler of
+        Nothing -> return Nothing
+        Just x -> return (Just x)
+  else return $ Just "to many "
 
-
-
-
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 fConvInput :: AGEnv -> IO String
 fConvInput env = do
     templ <- readFile $ fGptTemp env
     agda <- readFile $ (agdaFilesDir env) ++ (agdaFileName env) 
     let x1 = replaceText templ "{function_type}" (taskDescription env)
-    let x2 = replaceText x1 "{agda_code}"  agda
+    let x2 = replaceText x1 "{agda_code}" agda
     return x2
 
 rConvInput :: AGEnv -> String -> IO String
@@ -242,6 +233,8 @@ replaceText [] _ _ = []
 replaceText str search replace
   | L.take (L.length search) str == search = replace ++ replaceText (L.drop (L.length search) str) search replace
   | otherwise = L.head str : replaceText (L.tail str) search replace
+
+-- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   -- ConvPart
 

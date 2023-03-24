@@ -6,5 +6,5 @@ Current Agda code:
 
 {agda_code}
 
-Please provide the exact Agda code that I need to append to the existing code to implement the function according to the given type signature. please always put agda code beetwen "```"
+Please provide the exact Agda code that I need to append to the existing code to implement the function according to the given type signature. please always put only pure code beetwen "```". 
 
