@@ -1,6 +1,4 @@
-
-
-{-# LANGUAGE OverloadedStrings #-}
+nn{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-unused-matches #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
@@ -207,7 +205,7 @@ firstConv env= do
 replaceText :: String -> String -> String -> String
 replaceText [] _ _ = []
 replaceText str search replace
-  | L.take (L.length search) str == search = replace ++ replaceText (L.drop (L.length search) str) search replace
+  | take (L.length search) str == search = replace ++ replaceText (drop (L.length search) str) search replace
   | otherwise = L.head str : replaceText (L.tail str) search replace
 
 -- ConvPart

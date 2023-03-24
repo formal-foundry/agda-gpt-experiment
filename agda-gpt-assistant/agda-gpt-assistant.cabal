@@ -1,8 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.1.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
+--
+-- hash: 4cd324ca789e5e15f8cd050b7496ea1590834bf846d7be6e82f4f6406a44123a
 
 name:           agda-gpt-assistant
 version:        0.1.0.0
@@ -26,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Gpt
+      Types
   other-modules:
       Paths_agda_gpt_assistant
   hs-source-dirs:
@@ -33,14 +36,20 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       aeson
+    , ansi-terminal
     , base >=4.7 && <5
     , bytestring
     , filepath
+    , haskeline
     , http-client
     , http-client-tls
+    , mtl
     , process
+    , regex-posix
     , scotty
+    , split
     , text
+    , transformers
   default-language: Haskell2010
 
 executable agda-gpt-assistant-exe
@@ -53,14 +62,20 @@ executable agda-gpt-assistant-exe
   build-depends:
       aeson
     , agda-gpt-assistant
+    , ansi-terminal
     , base >=4.7 && <5
     , bytestring
     , filepath
+    , haskeline
     , http-client
     , http-client-tls
+    , mtl
     , process
+    , regex-posix
     , scotty
+    , split
     , text
+    , transformers
   default-language: Haskell2010
 
 test-suite agda-gpt-assistant-test
@@ -74,12 +89,18 @@ test-suite agda-gpt-assistant-test
   build-depends:
       aeson
     , agda-gpt-assistant
+    , ansi-terminal
     , base >=4.7 && <5
     , bytestring
     , filepath
+    , haskeline
     , http-client
     , http-client-tls
+    , mtl
     , process
+    , regex-posix
     , scotty
+    , split
     , text
+    , transformers
   default-language: Haskell2010

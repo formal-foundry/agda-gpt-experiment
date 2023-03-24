@@ -1,0 +1,10 @@
+Task: Implement a function with the following type signature in Agda:
+
+{function_type}
+
+Current Agda code:
+
+{agda_code}
+
+Please provide the exact Agda code that I need to append to the existing code to implement the function according to the given type signature.
+

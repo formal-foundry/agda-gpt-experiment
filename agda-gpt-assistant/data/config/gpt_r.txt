@@ -1,0 +1,10 @@
+Hi GPT, I tried implementing the function using the code you provided, but I encountered some errors during compilation. Here's the current state of my Agda code, including the changes based on your suggestion:
+
+{agda_code_with_changes}
+
+The compiler reported the following errors:
+
+{compiler_errors}
+
+Could you please help me fix these errors? Provide any necessary modifications to the existing code or additional Agda code to resolve the issues. Thanks!
+

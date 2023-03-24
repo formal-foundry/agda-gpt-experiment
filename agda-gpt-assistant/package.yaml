@@ -29,6 +29,12 @@ dependencies:
 - text
 - process
 - filepath
+- ansi-terminal
+- haskeline
+- regex-posix
+- split
+- mtl
+- transformers
 
 ghc-options:
 - -Wall
