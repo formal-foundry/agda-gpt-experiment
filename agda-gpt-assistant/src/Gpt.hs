@@ -210,7 +210,7 @@ replaceText str search replace
   | L.take (L.length search) str == search = replace ++ replaceText (L.drop (L.length search) str) search replace
   | otherwise = L.head str : replaceText (L.tail str) search replace
 
--- ConvPart
+  -- ConvPart
 
 
 -- ____________ TEST____________
