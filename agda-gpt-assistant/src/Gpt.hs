@@ -23,6 +23,7 @@ import System.Process as SP
 import qualified Data.List as L
 import Data.List.Split as DLS(splitOn)
 
+import System.Console.ANSI
 
 
 import Data.List.Split 
@@ -59,7 +60,7 @@ data Choice = Choice
 
 data Message = Message
     { role :: String
-    , content :: String
+    , content :: Text
     } deriving (Show)
 
 instance FromJSON ChatCompletion where
@@ -91,9 +92,10 @@ instance FromJSON Message where
 
 
 
-decodeRes :: BL.ByteString -> String
+decodeRes :: BL.ByteString -> Text
 decodeRes r = case ((A.decode r ):: Maybe ChatCompletion ) of
                      Nothing -> "Nothing"
+                     -- Just x -> "de"
                      Just x -> content $ message $ Prelude.head $ choices x
 
 
@@ -108,18 +110,19 @@ encodeReq msg = encode $
 
 
 -- GPT API endpoint
-gptApiUrl :: String
-gptApiUrl = "https://api.openai.com/v1/chat/completions"
+-- gptApiUrl :: String
+-- gptApiUrl = undedefined
 
 -- Your API key
-apiKey_ :: B.ByteString
-apiKey_ = "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"
+-- apiKey___ :: B.ByteString
+-- apiKey___ = "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"
 
 -- Create a request to the GPT API
-createGptRequest :: String -> Request
-createGptRequest prompt = request
+createGptRequest :: String -> String -> Request
+createGptRequest prompt key = request
   where
-    baseRequest = parseRequest_ gptApiUrl
+    apiKey_ = B.pack key 
+    baseRequest = parseRequest_ "https://api.openai.com/v1/chat/completions"
     request = baseRequest
       { method = "POST"
       , requestHeaders = [ ("Content-Type", "application/json")
@@ -128,13 +131,49 @@ createGptRequest prompt = request
       , requestBody = RequestBodyLBS (encodeReq prompt)
       }
 
-interactWithGpt :: String -> IO String
-interactWithGpt prompt = do
+gptConv :: String -> String -> IO String
+gptConv prompt key = do
   manager <- newManager tlsManagerSettings
-  request <- return (createGptRequest prompt)
+  request <- return (createGptRequest prompt key)
   response <- httpLbs request manager
-  -- putStrLn $ "Status: " ++ (show $ responseStatus response)
-  return  $ (decodeRes $ responseBody response)
+  -- putStrLn "###############################"
+  putStrLn $ show $ decodeRes $ responseBody response
+  putStrLn "################################"
+  putStr $ show $ L.length $ extractCode $ unpack (decodeRes $ responseBody response)
+  putStrLn "################################"
+  putStrLn $ L.concat $ extractCode $ unpack (decodeRes $ responseBody response)
+  -- putStrLn "###############################"
+  -- return  $ L.concat $ extractCode (decodeRes $ responseBody response)
+  return "test retunr"
+
+-- Extract code block from GPT answ
+
+extractCode :: String -> [String]
+extractCode str = extractCodeBlocks' str []
+  where extractCodeBlocks' [] acc = acc
+        extractCodeBlocks' xs acc = let block = takeCodeBlock xs
+                                    in case block of
+                                      Nothing -> extractCodeBlocks' (L.drop 1 xs) acc
+                                      Just (code, rest) -> extractCodeBlocks' rest (acc ++ [code])
+
+        takeCodeBlock :: String -> Maybe (String, String)
+        takeCodeBlock xs = if L.take 3 xs == "```"
+                           then let (block, rest) = L.span (/= '`') (L.drop 3 xs)
+                                in Just (block, L.drop 3 rest)
+                           else Nothing 
+
+
+
+
+
+
+-- ____________ ########## koniec połączenia z chatem GPTTT####
+-- interactWithGpt :: String -> IO String
+-- interactWithGpt prompt = do
+--   manager <- newManager tlsManagerSettings
+--   request <- return (createGptRequest prompt)
+--   response <- httpLbs request manager
+--   return  $ (decodeRes $ responseBody response)
 
 
 tryToCompile :: FilePath -> IO (Maybe String)
@@ -143,12 +182,12 @@ tryToCompile fp = do
   aReq <- runProcess_ path file
   let ret = case aReq of
               Nothing -> Nothing
-              Just re -> Just $ removeErrorSubstring path $ removeErrorSubstring path re
+              Just re -> Just $ rmAgdaErrSubS path $ rmAgdaErrSubS path re
   return ret 
 
-                 
-removeErrorSubstring :: String -> String -> String
-removeErrorSubstring substr str = go str
+-- usunięcie  dodatkowych adresów z błędu agdy                 
+rmAgdaErrSubS :: String -> String -> String
+rmAgdaErrSubS substr str = go str
   where go [] = []
         go s@(x:xs)
           | substr `L.isPrefixOf` s = L.drop (L.length substr) s
@@ -168,42 +207,36 @@ runProcess_ pwd afile = do
                   ExitFailure _ -> Just output
   return result
   
-
-extractCodeBlocksFromGPT :: String -> [String]
-extractCodeBlocksFromGPT str = extractCodeBlocks' str []
-  where extractCodeBlocks' [] acc = acc
-        extractCodeBlocks' xs acc = let block = takeCodeBlock xs
-                                    in case block of
-                                      Nothing -> extractCodeBlocks' (L.drop 1 xs) acc
-                                      Just (code, rest) -> extractCodeBlocks' rest (acc ++ [code])
-
-        takeCodeBlock :: String -> Maybe (String, String)
-        takeCodeBlock xs = if L.take 3 xs == "```"
-                           then let (block, rest) = L.span (/= '`') (L.drop 3 xs)
-                                in Just (block, L.drop 3 rest)
-                           else Nothing
-
-
-
-
-
+-- -----------------------------------------------
 debugMode :: AGMonad String
 debugMode = do
   env <- ask
-  liftIO $ putStrLn "helllo frm debug"
-  liftIO $ firstConv env
-  return "fde"
+  fcon <- liftIO $ fConvInput env
+  liftIO $ putStrLn fcon
+  answareFromGPT <- liftIO $ gptConv fcon (apiKey env)
+  liftIO $ putStrLn answareFromGPT
+  return "end debugMode func"
 
 
 
 
-firstConv :: AGEnv -> IO ()
-firstConv env= do
-    x <- readFile $ fGptTemp env
-    putStrLn x
-    putStrLn "e"
+fConvInput :: AGEnv -> IO String
+fConvInput env = do
+    templ <- readFile $ fGptTemp env
+    agda <- readFile $ (agdaFilesDir env) ++ (agdaFileName env) 
+    let x1 = replaceText templ "{function_type}" (taskDescription env)
+    let x2 = replaceText x1 "{agda_code}"  agda
+    return x2
 
-
+rConvInput :: AGEnv -> String -> IO String
+rConvInput env err = do
+    templ <- readFile $ fGptTemp env
+    agda <- readFile $ (agdaFilesDir env) ++ (agdaFileName env) 
+    let x1 = replaceText templ "{agda_code_with_changes}" (agdaFileName env)
+    let x2 = replaceText x1 "{compiler_errors}"  err
+    return x2
+  
+  
 replaceText :: String -> String -> String -> String
 replaceText [] _ _ = []
 replaceText str search replace
@@ -239,6 +272,20 @@ x2 = do
            Just k -> k
   putStrLn s
 
+
+
+-- data AGEnv = AGEnv
+--     { apiKey :: String
+--     , agdaFileName :: FilePath
+--     , agdaFilesDir :: FilePath
+--     , agdaCompilerPath :: FilePath
+--     , taskDescription :: String
+--     , dbCredentials :: String
+--     , operationMode :: OperationMode
+--     , maxTurns :: Int
+--     , fGptTemp :: FilePath
+--     , rGptTemp :: FilePath
+--     } deriving (Show)
 
 
 
