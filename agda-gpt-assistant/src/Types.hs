@@ -58,7 +58,8 @@ instance FromJSON FromConfig where
 data ConvPart = ConvPart
                   { gpt_input :: String
                   , gpt_res :: String
-                  , file_state :: String
+                  , pure_code_res :: String
+                  , current_agad_file :: String
                   , agda_res :: Maybe String
                   } deriving (Show)
 

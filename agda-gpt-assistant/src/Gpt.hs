@@ -124,6 +124,11 @@ gptConv prompt key = do
   manager <- newManager tlsManagerSettings
   request <- return (createGptRequest prompt key)
   response <- httpLbs request manager
+  putStrLn "odpowiedz od servera gpt \n\n\n"
+  putStrLn $ show $ (decodeRes $ responseBody response)
+  putStrLn $ "koniec odpowiedzi\n\n"
+  putStrLn $ "cały json z srwera:: ####\n\n"
+  putStrLn $ show response 
   return $  (plainCode  (decodeRes $ responseBody response),
              (unpack (  decodeRes $ responseBody response)))
 
@@ -163,12 +168,13 @@ tryToCompile :: FilePath -> IO (Maybe String)
 tryToCompile fp = do
   let (path, file) =  splitFileName fp
   aReq <- runProcess_ path file
-  let ret = case aReq of
-              Nothing -> Nothing
-              Just re -> Just $ rmSubS path $ rmSubS path re
-  return ret 
-
-
+  case aReq of
+    Nothing -> return Nothing
+    Just re -> do
+                putStrLn "bład z funkcji complie przed usunięciem adresów \n\n"
+                putStrLn re 
+                return $ Just $ rmSubS path $ rmSubS path re
+  
 runProcess_ ::  FilePath -> String -> IO (Maybe String)
 runProcess_ pwd afile = do
   let cp = shell $ "/home/kryn/.cabal/bin/agda" ++ " " ++ afile
@@ -193,24 +199,90 @@ catFile env = do
 debugMode :: AGMonad (Maybe String)
 debugMode = do
   env <- ask
-  a <- get
+  state <- get
+  liftIO $ putStrLn "jestem w funkcji debugMode\n\n"
   let agdaFile = (agdaFilesDir env) ++ (agdaFileName env)
-  if L.length a < 10
+  if L.length state == 0
   then
     do
-      liftIO $ catFile env
+      liftIO $ putStrLn $ "sprawdzam dlugość listy s : " ++ (show (L.length state)) ++ "\n\n"
+      -- liftIO $ catFile env
+      liftIO $ putStrLn "tworze zapytanie do gpt \n\n"
       fcon <- liftIO $ fConvInput env
+      liftIO $ putStrLn "takie zapytanie idzie go gpt:!!!!!!!!!!!!!!!!!"
       liftIO $ putStrLn fcon
+      liftIO $ putStrLn "koniec zapytania do GPT!!!!!!!!!!!!!\n\n"
       answareFromGPT <- liftIO $ gptConv fcon (apiKey env)
-      liftIO $ putStrLn $ fst answareFromGPT
+      liftIO $ putStrLn "odpowiedzi od GPT!!!!!!!!!\n"
+      liftIO $ putStrLn $ fst answareFromGPT ++ "\n\n"
+      liftIO $ putStrLn "a tak wygląda cała odpowiedz"
+      liftIO $ putStrLn $ snd answareFromGPT ++ "\n\n"
+      liftIO $ putStrLn "dodaje kod z odpowiedzi GPT do pliku agdy\n\n\n\n"
       liftIO $ appendFile agdaFile (fst answareFromGPT)
-      compiler <- liftIO $ tryToCompile agdaFile 
+      liftIO $ putStrLn "tak wygląda nowy plik agdy :  \n\n"
+      newAfile <- liftIO $ readFile agdaFile
+      liftIO $ putStrLn (newAfile ++ "@@@koniec czytania nowego plikiu@@" ++ "\n\n") 
+      compiler <- liftIO $ tryToCompile agdaFile
+      liftIO $ putStrLn "tworzę nową wartośc stanu i dodaje\\n"
+      let newState = (createConvPart fcon answareFromGPT newAfile compiler  : state)
+      liftIO $ putStrLn "robię update listy ze stanem"
+      put newState
       case compiler of
-        Nothing -> return Nothing
-        Just x -> return (Just x)
-  else return $ Just "to many "
+        Nothing -> do
+                   liftIO $ putStrLn "komplilacja agdy przebiegła OK\n\n"  
+                   return Nothing
+        Just x -> do
+                  liftIO $ putStrLn ("błað kompilatora agdy" ++ x ++ "\n\n\n") 
+                  return (Just x)
+  else 
+    do
+      liftIO $ putStrLn $ "sprawdzam dlugość listy s : " ++ (show (L.length state)) ++ "\n\n"
+      -- liftIO $ catFile env
+      -- liftIO $ putStrLn "po podmianie pliku agda na początkowy \n\n"
+
+      fcon <- liftIO $ fConvInput env
+      liftIO $ putStrLn "takie zapytanie idzie go gpt:!!!!!!!!!!!!!!!!!"
+      liftIO $ putStrLn fcon
+      liftIO $ putStrLn "koniec zapytania do GPT!!!!!!!!!!!!!\n\n"
+      answareFromGPT <- liftIO $ gptConv fcon (apiKey env)
+      liftIO $ putStrLn "odpowiedzi od GPT!!!!!!!!!\n"
+      liftIO $ putStrLn $ fst answareFromGPT ++ "\n\n"
+      liftIO $ putStrLn $ snd answareFromGPT ++ "\n\n"
+      liftIO $ putStrLn "dodaje kod z odpowiedzi GPT do pliku agdy\n\n\n\n"
+      liftIO $ appendFile agdaFile (fst answareFromGPT)
+      liftIO $ putStrLn "tak wygląda nowy plik agdy :  \n\n"
+      newAfile <- liftIO $ readFile agdaFile
+      liftIO $ putStrLn (newAfile ++ "koniec czytania nowego plikiu" ++ "\n\n") 
+      compiler <- liftIO $ tryToCompile agdaFile
+      liftIO $ putStrLn "tworzę nową wartośc stanu i dodaje\\n"
+      let newState = (createConvPart fcon answareFromGPT newAfile compiler  : state)
+      liftIO $ putStrLn "robię update listy ze stanem"
+      put newState
+      case compiler of
+        Nothing -> do
+                   liftIO $ putStrLn "komplilacja agdy przebiegła OK\n\n"  
+                   return Nothing
+        Just x -> do
+                  liftIO $ putStrLn ("błað kompilatora agdy" ++ x ++ "\n\n\n")
+                  liftIO $ putStrLn "usuwam plik agdy po zmianach\n\n"
+                  liftIO $ rmAFile env
+                  liftIO $ putStrLn "kopiuję z bal plik agdy \n\n"
+                  liftIO $ cpAFile env
+                  return (Just x)
+
+
 
 -- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+createConvPart :: String -> (String, String) -> String -> Maybe String -> ConvPart
+createConvPart gptIn gptOut afile acres =
+  ConvPart{ gpt_input =gptIn
+          , gpt_res =  fst gptOut
+          , pure_code_res = snd gptOut
+          , current_agad_file =  afile
+          , agda_res = acres
+          } 
+
 fConvInput :: AGEnv -> IO String
 fConvInput env = do
     templ <- readFile $ fGptTemp env
@@ -285,3 +357,25 @@ x2 = do
 test2 :: String 
 test2 = "\n\nThe implementation of the `add` function can be done recursively by pattern matching on the first argument `n`.\n\nHere's the complete Agda code implementing this function:\n\n```\ndata Nat : Set where\n  zero : Nat\n  suc : Nat → Nat\n\nadd : Nat → Nat → Nat\nadd zero m = m\nadd (suc n) m = suc (add n m)\n```\n\nThe first equation of the `add` function defines the base case for the recursion, where adding zero to any number `m` has no effect and returns `m`.\n\nThe second equation handles the recursive case where we have a successor `suc n` of some number `n`. To add this number to another number `m`, we simply recursively add `n` to `m`, and then add one more to the result with a `suc` constructor."
 
+  
+cpFile :: AGEnv -> IO ()
+cpFile env = do
+  system $ "cp " ++(agdaFilesDir env ) ++ (agdaFileName env) ++ " "
+       ++ (agdaFilesDir env ) ++ "bak/"  ++ (agdaFileName env)++ ".bak"
+  return ()
+
+cpAFile :: AGEnv -> IO ()
+cpAFile env = do
+  system $ "cp " ++(agdaFilesDir env )  ++ "bak/" ++ (agdaFileName env) ++ ".bak" ++ " "
+       ++ (agdaFilesDir env )  ++ (agdaFileName env)
+  return ()
+
+rmBFile :: AGEnv -> IO ()
+rmBFile env = do
+  system $ "rm " ++ (agdaFilesDir env ) ++ "bak/"  ++ (agdaFileName env)++ ".bak"
+  return ()
+
+rmAFile :: AGEnv -> IO ()
+rmAFile env = do
+  system $ "rm " ++ (agdaFilesDir env )   ++ (agdaFileName env)
+  return ()
