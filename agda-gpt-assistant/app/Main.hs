@@ -85,28 +85,30 @@ mainAG env = do
 
 xx :: AGEnv -> [ConvPart] -> IO ()
 xx env cP = do
-  cpFile env
-  putStrLn "Kopiuje plik agdy do katalogu bak\n\n"
+  -- cpFile env
+  -- putStrLn "Kopiuje plik agdy do katalogu bak\n\n"
   putStrLn "przed odpaleniem runRWST"
   (mValue, state, _ ) <- runRWST G.debugMode env cP
   putStrLn "powrót do XX Main po odpaleniu runRSt\n\n"
-  putStrLn "usuwam plik agdy po zmianach\n\n"
-  rmAFile env
+  -- putStrLn "usuwam plik agdy po zmianach\n\n"
+  -- rmAFile env
   putStrLn "kopiuję z bal plik agdy \n\n"
-  cpAFile env 
+  -- cpAFile env 
   putStrLn "usuwam plik bak agdy \n\n"
-  rmBFile env
+  -- rmBFile env
   putStrLn " po usunięciu pliku bak"
   case mValue of
     Just x -> 
-      if length state < 3
+      if length state < 1
       then
         do
           putStrLn $ "sprawdzam dlugośc lista ze stanem w main xx:   " ++ show ( length state)  ++ "\n\n"
           putStrLn "przed odpaleniem kolejny raz funkcjixx funckji\n\n"
           xx env state
-        else putStrLn "f"
-    Nothing -> putStrLn "kompilacja OK"  
+        else putStrLn "rzekroczona liczba powtórzeń"
+    Nothing ->do
+      setSGR [(SetColor Foreground Dull Green )]
+      putStrLn "kompilacja Agdy : OK !!!!!!!!"  
   
 cpFile :: AGEnv -> IO ()
 cpFile env = do

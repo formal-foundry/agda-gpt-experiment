@@ -11,7 +11,7 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import Control.Monad.Trans.RWS 
 import Control.Monad.IO.Class (liftIO)
-
+import Data.Maybe
 
 import  Types 
 import Data.Aeson as A 
@@ -35,78 +35,30 @@ import System.Exit
 import System.FilePath (splitFileName)
 
 
-data ChatCompletion = ChatCompletion
-    { id :: String
-    , object :: String
-    , created :: Integer
-    , model :: String
-    , usage :: Usage
-    , choices :: [Choice]
-    } deriving (Show)
 
-data Usage = Usage
-    { prompt_tokens :: Int
-    , completion_tokens :: Int
-    , total_tokens :: Int
-    } deriving (Show)
-
-data Choice = Choice
-    { message :: Message
-    , finish_reason :: String
-    , index :: Int
-    } deriving (Show)
-
-data Message = Message
-    { role :: String
-    , content :: Text
-    } deriving (Show)
-
-instance FromJSON ChatCompletion where
-    parseJSON = withObject "ChatCompletion" $ \v -> ChatCompletion
-        <$> v .: "id"
-        <*> v .: "object"
-        <*> v .: "created"
-        <*> v .: "model"
-        <*> v .: "usage"
-        <*> v .: "choices"
-
-instance FromJSON Usage where
-    parseJSON = withObject "Usage" $ \v -> Usage
-        <$> v .: "prompt_tokens"
-        <*> v .: "completion_tokens"
-        <*> v .: "total_tokens"
-
-instance FromJSON Choice where
-    parseJSON = withObject "Choice" $ \v -> Choice
-        <$> v .: "message"
-        <*> v .: "finish_reason"
-        <*> v .: "index"
-
-instance FromJSON Message where
-    parseJSON = withObject "Message" $ \v -> Message
-        <$> v .: "role"
-        <*> v .: "content"
-
-
-
-
-decodeRes :: BL.ByteString -> Text
+decodeRes :: BL.ByteString -> String
 decodeRes r = case ((A.decode r ):: Maybe ChatCompletion ) of
                      Nothing -> "Nothing"
                      Just x -> content $ message $ Prelude.head $ choices x
 
+genJsonReq :: [Message] -> BL.ByteString
+genJsonReq messages =
+  let gptModel = ("gpt-3.5-turbo" :: String)
+  in 
+  encode $ A.object ["model" .= gptModel, "messages" .= (L.reverse messages)]
 
-encodeReq :: String -> BL.ByteString
-encodeReq msg = encode $
-    A.object [ "model" .= ("gpt-3.5-turbo" :: String)
-           , "messages" .= [ A.object [ "role" .= ("user" :: String)
-                                     , "content" .= msg
-                                     ]
-                           ]
-           ]
+
+-- encodeReq :: String -> BL.ByteString
+-- encodeReq msg = encode $
+--     A.object [ "model" .= ("gpt-3.5-turbo" :: String)
+--            , "messages" .= [ A.object [ "role" .= ("user" :: String)
+--                                      , "content" .= msg
+--                                      ]
+--                            ]
+--            ]
 
 -- Create a request to the GPT API
-createGptRequest :: String -> String -> Request
+createGptRequest :: [Message] -> String -> Request
 createGptRequest prompt key = request
   where
     apiKey_ = B.pack key 
@@ -116,13 +68,20 @@ createGptRequest prompt key = request
       , requestHeaders = [ ("Content-Type", "application/json")
                          , ("Authorization", B.concat ["Bearer ", apiKey_])
                          ]
-      , requestBody = RequestBodyLBS (encodeReq prompt)
+      -- , requestBody = RequestBodyLBS (encodeReq prompt)
+      , requestBody = RequestBodyLBS (genJsonReq prompt)
       }
 
-gptConv :: String -> String -> IO (String, String)
+-- qwe :: [Message]
+-- qwe = return Message { role = "user"
+--                      , content = "who is the best nba player?"
+--                      }
+
+gptConv :: [Message] -> String -> IO (String, String)
 gptConv prompt key = do
   manager <- newManager tlsManagerSettings
   request <- return (createGptRequest prompt key)
+  putStrLn $show request
   response <- httpLbs request manager
   putStrLn "odpowiedz od servera gpt \n\n\n"
   putStrLn $ show $ (decodeRes $ responseBody response)
@@ -130,11 +89,11 @@ gptConv prompt key = do
   putStrLn $ "cały json z srwera:: ####\n\n"
   putStrLn $ show response 
   return $  (plainCode  (decodeRes $ responseBody response),
-             (unpack (  decodeRes $ responseBody response)))
+              (  decodeRes $ responseBody response))
 
 
-plainCode :: Text -> String
-plainCode res = rmSubS "Agda" (rmSubS "agda" (L.concat $ extractCode (unpack res)))
+plainCode :: String -> String
+plainCode res = rmSubS "Agda" (rmSubS "agda" (L.concat $ extractCode  res))
 
 
 extractCode :: String -> [String]
@@ -196,12 +155,14 @@ catFile env = do
   system $ "cat " ++(agdaFilesDir env ) ++ "bak/" ++ (agdaFileName env) ++ ".bak" ++ " " ++ (agdaFilesDir env )  ++ (agdaFileName env)
   return ()
 
+
 debugMode :: AGMonad (Maybe String)
 debugMode = do
   env <- ask
   state <- get
   liftIO $ putStrLn "jestem w funkcji debugMode\n\n"
   let agdaFile = (agdaFilesDir env) ++ (agdaFileName env)
+  let firstPrompt = Message {role = "system", content = "You are a helpful assistant."}
   if L.length state == 0
   then
     do
@@ -209,10 +170,12 @@ debugMode = do
       -- liftIO $ catFile env
       liftIO $ putStrLn "tworze zapytanie do gpt \n\n"
       fcon <- liftIO $ fConvInput env
+      let promptReq = Message {role = "user", content = fcon}
       liftIO $ putStrLn "takie zapytanie idzie go gpt:!!!!!!!!!!!!!!!!!"
       liftIO $ putStrLn fcon
       liftIO $ putStrLn "koniec zapytania do GPT!!!!!!!!!!!!!\n\n"
-      answareFromGPT <- liftIO $ gptConv fcon (apiKey env)
+      answareFromGPT <- liftIO $ gptConv [firstPrompt, promptReq] (apiKey env)
+      let promptRes = Message {role = "assistant" , content = (snd answareFromGPT)}
       liftIO $ putStrLn "odpowiedzi od GPT!!!!!!!!!\n"
       liftIO $ putStrLn $ fst answareFromGPT ++ "\n\n"
       liftIO $ putStrLn "a tak wygląda cała odpowiedz"
@@ -224,7 +187,7 @@ debugMode = do
       liftIO $ putStrLn (newAfile ++ "@@@koniec czytania nowego plikiu@@" ++ "\n\n") 
       compiler <- liftIO $ tryToCompile agdaFile
       liftIO $ putStrLn "tworzę nową wartośc stanu i dodaje\\n"
-      let newState = (createConvPart fcon answareFromGPT newAfile compiler  : state)
+      let newState = (createConvPart fcon answareFromGPT newAfile compiler [firstPrompt, promptReq, promptRes]  : state)
       liftIO $ putStrLn "robię update listy ze stanem"
       put newState
       case compiler of
@@ -237,14 +200,14 @@ debugMode = do
   else 
     do
       liftIO $ putStrLn $ "sprawdzam dlugość listy s : " ++ (show (L.length state)) ++ "\n\n"
-      -- liftIO $ catFile env
-      -- liftIO $ putStrLn "po podmianie pliku agda na początkowy \n\n"
-
-      fcon <- liftIO $ fConvInput env
+      rcon <- liftIO $ rConvInput env (fromJust(agda_res (L.head state)))
       liftIO $ putStrLn "takie zapytanie idzie go gpt:!!!!!!!!!!!!!!!!!"
-      liftIO $ putStrLn fcon
+      liftIO $ putStrLn rcon
       liftIO $ putStrLn "koniec zapytania do GPT!!!!!!!!!!!!!\n\n"
-      answareFromGPT <- liftIO $ gptConv fcon (apiKey env)
+      let rPromptReq = Message {role =  "user", content = rcon}
+      let sPrompt =  promptL (L.head state) 
+      answareFromGPT <- liftIO $ gptConv (rPromptReq : sPrompt)  (apiKey env)
+      let sPromptReq = Message {role = "assisant", content = (snd answareFromGPT)}
       liftIO $ putStrLn "odpowiedzi od GPT!!!!!!!!!\n"
       liftIO $ putStrLn $ fst answareFromGPT ++ "\n\n"
       liftIO $ putStrLn $ snd answareFromGPT ++ "\n\n"
@@ -255,7 +218,7 @@ debugMode = do
       liftIO $ putStrLn (newAfile ++ "koniec czytania nowego plikiu" ++ "\n\n") 
       compiler <- liftIO $ tryToCompile agdaFile
       liftIO $ putStrLn "tworzę nową wartośc stanu i dodaje\\n"
-      let newState = (createConvPart fcon answareFromGPT newAfile compiler  : state)
+      let newState = (createConvPart rcon answareFromGPT newAfile compiler (sPromptReq:rPromptReq:sPrompt)  : state)
       liftIO $ putStrLn "robię update listy ze stanem"
       put newState
       case compiler of
@@ -274,13 +237,14 @@ debugMode = do
 
 -- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-createConvPart :: String -> (String, String) -> String -> Maybe String -> ConvPart
-createConvPart gptIn gptOut afile acres =
+createConvPart :: String -> (String, String) -> String -> Maybe String -> [Message] ->ConvPart
+createConvPart gptIn gptOut afile acres fp =
   ConvPart{ gpt_input =gptIn
           , gpt_res =  fst gptOut
           , pure_code_res = snd gptOut
           , current_agad_file =  afile
           , agda_res = acres
+          , promptL = fp
           } 
 
 fConvInput :: AGEnv -> IO String

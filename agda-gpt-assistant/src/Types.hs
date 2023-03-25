@@ -15,6 +15,64 @@ import Control.Monad.Trans.RWS
 import Control.Monad.RWS.Class
 
 
+data ChatCompletion = ChatCompletion
+    { id :: String
+    , object :: String
+    , created :: Integer
+    , model :: String
+    , usage :: Usage
+    , choices :: [Choice]
+    } deriving (Show)
+
+data Usage = Usage
+    { prompt_tokens :: Int
+    , completion_tokens :: Int
+    , total_tokens :: Int
+    } deriving (Show)
+
+data Choice = Choice
+    { message :: Message
+    , finish_reason :: String
+    , index :: Int
+    } deriving (Show)
+
+data Message = Message
+    { role :: String
+    , content :: String
+    } deriving (Show)
+
+instance FromJSON ChatCompletion where
+    parseJSON = withObject "ChatCompletion" $ \v -> ChatCompletion
+        <$> v .: "id"
+        <*> v .: "object"
+        <*> v .: "created"
+        <*> v .: "model"
+        <*> v .: "usage"
+        <*> v .: "choices"
+
+instance FromJSON Usage where
+    parseJSON = withObject "Usage" $ \v -> Usage
+        <$> v .: "prompt_tokens"
+        <*> v .: "completion_tokens"
+        <*> v .: "total_tokens"
+
+instance FromJSON Choice where
+    parseJSON = withObject "Choice" $ \v -> Choice
+        <$> v .: "message"
+        <*> v .: "finish_reason"
+        <*> v .: "index"
+
+instance FromJSON Message where
+    parseJSON = withObject "Message" $ \v -> Message
+        <$> v .: "role"
+        <*> v .: "content"
+
+instance ToJSON Message where
+  toJSON (Message role content) = A.object ["role" .= role, "content" .= content]
+
+
+
+
 data OperationMode =  PrettyMode |  DebugMode
   deriving (Show)
 
@@ -61,6 +119,7 @@ data ConvPart = ConvPart
                   , pure_code_res :: String
                   , current_agad_file :: String
                   , agda_res :: Maybe String
+                  , promptL :: [Message]
                   } deriving (Show)
 
 
