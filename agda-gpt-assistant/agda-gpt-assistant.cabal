@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4cd324ca789e5e15f8cd050b7496ea1590834bf846d7be6e82f4f6406a44123a
+-- hash: 766b348e824b4f5ce622c007a8e6f194ea07b75028e696b520fdfff02df3409f
 
 name:           agda-gpt-assistant
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      Extra
       Gpt
       Types
   other-modules:

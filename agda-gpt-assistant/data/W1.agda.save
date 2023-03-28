@@ -1,0 +1,2 @@
+data Maybe (A : Set) : Set where\n nothing : Maybe A
+ just : A → Maybe A

@@ -1,10 +1,30 @@
+
 #!/bin/sh
-#sudo fuser -k -TERM -n tcp 3000
-#echo "zabijanie procesu tcp:3000"
-stack build --copy-bins 
+
+# ######################## VARIABLES #############################
+#  Note that there should be no spaces around the "=" sign,   ####
+#  and the variable name should not have any spaces either.   ####
+
+FILE_NAME=W1.agda
+
+FUNCTION_TYPE="length : {A : Set} → List A → Nat"
+
+OPERATION_MODE="Debug"  # eg Pretty or Debug
+
+MAX_TURNS=3
+
+CONFIG_PATH="/home/kryn/tt/agda-gpt-assistant/agda-gpt-assistant/data/config/config1.json"
+
+
+# ##################################################################
+
+
+if [ $1 == 1  ]; then
+    stack build --copy-bins
+else
+    echo "Haskell binary file without changes"
+fi
+
 cd /home/kryn/.local/bin
-./agda-gpt-assistant-exe T3.agda "length : {A : Set} → List A → Nat" x3 4 /home/kryn/tt/agda-gpt-assistant/agda-gpt-assistant/data/config/config1.json
 
-
-# -- bin [agda_file_name] [task description] [operation mode] [max turns] [config name]  
-
+./agda-gpt-assistant-exe $FILE_NAME  "$FUNCTION_TYPE"  $OPERATION_MODE  $MAX_TURNS $CONFIG_PATH

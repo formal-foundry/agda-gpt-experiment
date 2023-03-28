@@ -8,26 +8,15 @@
 module Main  where
 
 import Types
-import System.Environment (getArgs)
+import qualified Gpt as G
+import Extra
 
+import System.Environment (getArgs)
+import System.Process
 import System.Console.ANSI
 
 import Data.Aeson as A
-
-import System.Console.Haskeline
-
-import Control.Monad.IO.Class as M
-import qualified Gpt as G 
-import Web.Scotty as S
-import Data.Text (pack)
-import Data.Text.Lazy (fromStrict)
-import System.Process
-
 import Control.Monad.Trans.RWS 
-import Control.Monad.IO.Class (liftIO)
-
-import Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString.Lazy.Char8 as BS
 
 main :: IO ()
 main = loadConfigAndRun  mainAG
@@ -41,14 +30,15 @@ loadConfigAndRun mAG = do
     5 -> do
          config  <- (A.decodeFileStrict x5) :: IO (Maybe FromConfig)
          case config of
-           Nothing -> putStrLn "Bad config file"
+           Nothing -> do
+             cPrint  "\nThere is something wrong with config file check it out:  \n" Red
+             putStrLn $ x5 ++ "\n"
            Just c ->
              let 
              mode = case x3 of
-                      "pretty" -> PrettyMode
+                      "Pretty" -> PrettyMode
                       _        -> DebugMode
-
-
+                 
              env = AGEnv
                { apiKey = gptApiKey c
                , agdaFileName = x1
@@ -60,98 +50,61 @@ loadConfigAndRun mAG = do
                , maxTurns = (read x4) :: Int
                , fGptTemp = f_GptTemp c
                , rGptTemp = r_GptTemp c
+               , gptModel =  gpt_model c
                }
             in mAG env
              
-    _ -> putStrLn "invalid number of parameters passed"
+    _ -> do
 
- 
--- bin [agda_file_name] [task description] [operation mode] [max turns] [config name]  
-
+      cPrint "Incorrect number of parameters passed during startup" Red
   
 mainAG :: AGEnv -> IO ()
 mainAG env = do
-  initInfo env
   checkAgdaF <- G.tryToCompile $ (agdaFilesDir env ) ++ (agdaFileName env)
   case checkAgdaF of
     Just x -> do
-       setSGR [(SetColor Foreground Dull Red)]
-       putStrLn $ "bad agda File" ++ x 
-       setSGR [Reset]
-    Nothing -> case operationMode env of
-                 DebugMode -> xx env []
-                                           
-                 PrettyMode -> putStrLn "not ready, yet"
+       cPrint  ("Incorrect  agda File:  " ++ (agdaFileName env) ++ "\n\n" ++ "COMPILER ERROR: " ++ x ) Red 
+    Nothing -> do
+               initInfo env
+               conversation env []
 
-xx :: AGEnv -> [ConvPart] -> IO ()
-xx env cP = do
-  -- cpFile env
-  -- putStrLn "Kopiuje plik agdy do katalogu bak\n\n"
-  putStrLn "przed odpaleniem runRWST"
+conversation :: AGEnv -> [ConvPart] -> IO ()
+conversation env cP = do
   (mValue, state, _ ) <- runRWST G.debugMode env cP
-  putStrLn "powrót do XX Main po odpaleniu runRSt\n\n"
-  -- putStrLn "usuwam plik agdy po zmianach\n\n"
-  -- rmAFile env
-  putStrLn "kopiuję z bal plik agdy \n\n"
-  -- cpAFile env 
-  putStrLn "usuwam plik bak agdy \n\n"
-  -- rmBFile env
-  putStrLn " po usunięciu pliku bak"
+  let l = length state
   case mValue of
     Just x -> 
-      if length state < 1
+      if l  < (maxTurns env)
       then
         do
-          putStrLn $ "sprawdzam dlugośc lista ze stanem w main xx:   " ++ show ( length state)  ++ "\n\n"
-          putStrLn "przed odpaleniem kolejny raz funkcjixx funckji\n\n"
-          xx env state
-        else putStrLn "rzekroczona liczba powtórzeń"
+          conversation env state
+        else do
+        cPrint "Too many attempts, GPT-Agda fail. Increase max turn or change agda task for GPT." Red
+
     Nothing ->do
-      setSGR [(SetColor Foreground Dull Green )]
-      putStrLn "kompilacja Agdy : OK !!!!!!!!"  
-  
-cpFile :: AGEnv -> IO ()
-cpFile env = do
-  system $ "cp " ++(agdaFilesDir env ) ++ (agdaFileName env) ++ " "
-       ++ (agdaFilesDir env ) ++ "bak/"  ++ (agdaFileName env)++ ".bak"
-  return ()
-
-cpAFile :: AGEnv -> IO ()
-cpAFile env = do
-  system $ "cp " ++(agdaFilesDir env )  ++ "bak/" ++ (agdaFileName env) ++ ".bak" ++ " "
-       ++ (agdaFilesDir env )  ++ (agdaFileName env)
-  return ()
-
-rmBFile :: AGEnv -> IO ()
-rmBFile env = do
-  system $ "rm " ++ (agdaFilesDir env ) ++ "bak/"  ++ (agdaFileName env)++ ".bak"
-  return ()
-
-rmAFile :: AGEnv -> IO ()
-rmAFile env = do
-  system $ "rm " ++ (agdaFilesDir env )   ++ (agdaFileName env)
-  return ()
-
-catFile :: AGEnv -> IO ()
-catFile env = do
-  system $ "cat " ++(agdaFilesDir env ) ++ "bak/" ++ (agdaFileName env) ++ ".bak" ++ " " ++ (agdaFilesDir env )  ++ (agdaFileName env)
-  return ()
-
+      setSGR [(SetColor Foreground Dull Green)]
+      putStrLn $ "Compilation succeeded in " ++ (show l) ++ " attempts. Check new agda File" 
+      setSGR [Reset]
 
 initInfo :: AGEnv ->  IO ()
 initInfo env = do
   setSGR [(SetColor Foreground Dull Blue)]
-  putStrLn "###############################################"
-  putStrLn "Start Program with params:\n\n"
+  putStrLn "\n\n\n###############################################"
+  putStrLn "Started with the following data:\n\n"
   setSGR [Reset]
-  setSGR [SetConsoleIntensity BoldIntensity]
-  putStrLn "param details"
-  setSGR [Reset]
-  putStrLn "Details......."
+  putStrLn $"TASK:  " ++ (taskDescription env) ++ "\n\n"
+  putStrLn $"MODE:  " ++ (show (operationMode env)) ++ "\n\n"
+  putStrLn $"MAX TURN :  " ++ (show (maxTurns env)) ++ "\n\n"
+  putStrLn $"MODEL:  " ++ (gptModel env) ++ "\n\n"
+  agdaFile <- readFile (agdaFilesDir env ++ agdaFileName env)
+  setSGR [(SetConsoleIntensity BoldIntensity)]
+  putStrLn "AGDA_CODE: \n\n" 
+  setSGR [(Reset)]
+  putStrLn agdaFile
+  case operationMode env of
+    PrettyMode -> do
+      setCursorPosition 0 0
+      clearScreen
+    DebugMode -> return ()
 
-www :: Int -> IO ()
-www k = do
-  putStrLn "x"
-  if k > 0
-  then www ( k - 1)
-  else return ()
+

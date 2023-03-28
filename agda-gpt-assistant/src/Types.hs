@@ -88,6 +88,7 @@ data AGEnv = AGEnv
     , maxTurns :: Int
     , fGptTemp :: FilePath
     , rGptTemp :: FilePath
+    , gptModel :: String
     } deriving (Show)
 
 -- data  
@@ -98,6 +99,7 @@ data FromConfig = FromConfig
   , pathAgdaCompiler :: String
   , f_GptTemp :: FilePath
   , r_GptTemp :: FilePath
+  , gpt_model :: String
   } deriving (Show)
 
 instance FromJSON FromConfig where
@@ -106,7 +108,8 @@ instance FromJSON FromConfig where
     <*> v .: "path_agda_file_dir"
     <*> v .: "Path_agda_compiler"
     <*> v .: "first_template_to_gpt"
-    <*> v .: "rest_template_to_gpt" 
+    <*> v .: "rest_template_to_gpt"
+    <*> v .: "gpt_model"
 
 
 
