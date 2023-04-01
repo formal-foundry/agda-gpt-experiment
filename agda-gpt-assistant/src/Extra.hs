@@ -13,7 +13,11 @@ import Control.Monad.Trans.RWS
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe
 
-import  Types 
+import  Types
+
+import System.Environment (getEnv)
+
+import System.Directory
 import Data.Aeson as A 
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -43,19 +47,57 @@ cPrint s c = do
   
 cpFile :: AGEnv -> IO ()
 cpFile env = do
-  system $ "cp " ++(agdaFilesDir env ) ++ (agdaFileName env) ++ " "
-       ++ (agdaFilesDir env ) ++ "bak/"  ++ (agdaFileName env)++ ".bak"
+  system $ "cp "  ++ (agdaFileName env) ++ " "  ++ (agdaFileName env) ++ ".bak"
   return ()
 
 cpAFile :: AGEnv -> IO ()
 cpAFile env = do
-  system $ "cp " ++(agdaFilesDir env )  ++ "bak/" ++ (agdaFileName env) ++ ".bak" ++ " "
-       ++ (agdaFilesDir env )  ++ (agdaFileName env)
+  system $ "cp " ++ (agdaFileName env) ++ ".bak" ++ " " ++ (agdaFileName env)
   return ()
 
 rmAFile :: AGEnv -> IO ()
 rmAFile env = do
-  system $ "rm " ++ (agdaFilesDir env )   ++ (agdaFileName env)
+  system $ "rm " ++  (agdaFileName env)
   return ()
 
 
+check_promt :: String ->  IO String
+check_promt s = do
+  home <- getEnv "HOME"
+  l <- doesFileExist $ "./templates/gpt_"++s++".txt"
+  case l of
+    True -> return $ "./templates/gpt_"++s++".txt"
+    False -> do
+      g <- doesFileExist $ home ++ "/.agda-gpt-assistant/templates/gpt_"++s++".txt"
+      case g of
+        True -> return  $ home++"/.agda-gpt-assistant/templates/gpt_"++s++".txt"
+        False -> do
+          cPrint ("I can't find gpt_"++s++".txt, check it in /templates/ or ~/.agda-gpt-assistant/templates\n") Red
+          putStrLn "--"
+          die "Something went wrong, try one more time"
+
+check_agda :: String ->  IO String
+check_agda file = do
+  l <- doesFileExist $ file
+  case l of
+    True -> return file
+    False -> do
+       cPrint ("I can't find "++ file ) Red
+       putStrLn "--"
+       die "Something went wrong, try one more time"
+
+
+check_config :: String -> IO String
+check_config conf = do
+  home <- getEnv "HOME"
+  l <- doesFileExist $ conf
+  case l of
+    True -> return $ conf
+    False -> do
+      g <- doesFileExist $ home++"/.agda-gpt-assistant/" ++ conf 
+      case g of
+        True -> return  $ home++"/.agda-gpt-assistant/"++ conf
+        False -> do
+          cPrint ("I can't find " ++ conf ++ ", check it in currnet dir or ~/.agda-gpt-assistant/\n") Red
+          putStrLn "--"
+          die "Something went wrong, try one more time"

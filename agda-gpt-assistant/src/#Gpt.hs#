@@ -103,7 +103,7 @@ extractCode str = extractCodeBlocks' str []
 
 
 
-tryToCompile :: String -> IO (Maybe String)
+tryToCompile :: FilePath -> IO (Maybe String)
 tryToCompile fp = do
   let (path, file) =  splitFileName fp
   aReq <- runProcess_ path file
@@ -114,7 +114,7 @@ tryToCompile fp = do
       
 runProcess_ ::  FilePath -> String -> IO (Maybe String)
 runProcess_ pwd afile = do
-  let cp = shell $ "agda" ++ " " ++ afile
+  let cp = shell $ "/home/kryn/.cabal/bin/agda" ++ " " ++ afile
       ncp = cp { cwd = Just pwd
                , std_out = CreatePipe
                , std_err = CreatePipe
@@ -122,6 +122,7 @@ runProcess_ pwd afile = do
   (code, output, errorOutput) <- readCreateProcessWithExitCode ncp ""
   let result = case code of
                   ExitSuccess   -> Nothing
+                  
                   ExitFailure _ -> Just output
   return result
   
@@ -129,7 +130,8 @@ runProcess_ pwd afile = do
 
 debugMode :: AGMonad (Maybe String)
 debugMode = do
-  env <- ask
+  env <- askeroff
+  
   state <- get
   let model = gptModel env
       key = apiKey env
@@ -142,7 +144,7 @@ debugMode = do
       liftIO $ putStrLn "Debug Mode"
   let sl = L.length state 
   liftIO $ cPrint ("\n\n ############## Attempt number:  " ++ show (sl+1) ++ "  ##############\n\n" )  Cyan 
-  let agdaFile =  (agdaFileName env)
+  let agdaFile = (agdaFilesDir env) ++ (agdaFileName env)
       firstPrompt = Message {role = "system", content = "You are a helpful assistant."}
       
 
@@ -241,7 +243,7 @@ createConvPart gptIn gptOut afile acres fp =
 fConvInput :: AGEnv -> IO String
 fConvInput env = do
     templ <- readFile $ fGptTemp env
-    agda <- readFile $  (agdaFileName env) 
+    agda <- readFile $ (agdaFilesDir env) ++ (agdaFileName env) 
     let x1 = replaceText templ "{function_type}" (taskDescription env)
     let x2 = replaceText x1 "{agda_code}" agda
     return x2
@@ -249,7 +251,7 @@ fConvInput env = do
 rConvInput :: String -> AGEnv -> String -> IO String
 rConvInput cf env err = do
     templ <- readFile $ rGptTemp env
-    agda <- readFile $  (agdaFileName env) 
+    agda <- readFile $ (agdaFilesDir env) ++ (agdaFileName env) 
     let x1 = replaceText templ "{agda_code_with_changes}" cf
     let x2 = replaceText x1 "{compiler_errors}"  err
     return x2

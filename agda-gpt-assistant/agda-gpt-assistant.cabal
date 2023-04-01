@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 766b348e824b4f5ce622c007a8e6f194ea07b75028e696b520fdfff02df3409f
+-- hash: 96b4777142f9eb4c2f521a4b7002ed2ece75791b3f2a4d42fabbbb60686aaa33
 
 name:           agda-gpt-assistant
 version:        0.1.0.0
@@ -40,6 +40,8 @@ library
     , ansi-terminal
     , base >=4.7 && <5
     , bytestring
+    , cmdargs
+    , directory
     , filepath
     , haskeline
     , http-client
@@ -66,6 +68,8 @@ executable agda-gpt-assistant-exe
     , ansi-terminal
     , base >=4.7 && <5
     , bytestring
+    , cmdargs
+    , directory
     , filepath
     , haskeline
     , http-client
@@ -93,6 +97,8 @@ test-suite agda-gpt-assistant-test
     , ansi-terminal
     , base >=4.7 && <5
     , bytestring
+    , cmdargs
+    , directory
     , filepath
     , haskeline
     , http-client

@@ -35,6 +35,9 @@ dependencies:
 - split
 - mtl
 - transformers
+- cmdargs
+- directory 
+
 
 ghc-options:
 - -Wall

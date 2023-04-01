@@ -13,8 +13,9 @@ OPERATION_MODE="Debug"  # eg Pretty or Debug
 
 MAX_TURNS=3
 
-CONFIG_PATH="/home/kryn/tt/agda-gpt-assistant/agda-gpt-assistant/data/config/config1.json"
+#CONFIG_PATH="/home/kryn/tt/agda-gpt-assistant/agda-gpt-assistant/data/config/config1.json"
 
+CONFIG_PATH="./config1.json"
 
 # ##################################################################
 

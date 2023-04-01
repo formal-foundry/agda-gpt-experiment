@@ -1,14 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# OPTIONS_GHC -fno-warn-unused-matches #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 {-# OPTIONS_GHC -fno-warn-missing-export-lists #-}
 
+{-# OPTIONS_GHC -fno-cse #-}
+
 module Types  where
 
 import Data.Aeson as A
 
+
+import System.Console.CmdArgs
 import Control.Monad.IO.Class
 
 import Control.Monad.Trans.RWS
@@ -80,10 +85,7 @@ data OperationMode =  PrettyMode |  DebugMode
 data AGEnv = AGEnv
     { apiKey :: String
     , agdaFileName :: FilePath
-    , agdaFilesDir :: FilePath
-    , agdaCompilerPath :: FilePath
     , taskDescription :: String
-    , dbCredentials :: String
     , operationMode :: OperationMode
     , maxTurns :: Int
     , fGptTemp :: FilePath
@@ -91,24 +93,32 @@ data AGEnv = AGEnv
     , gptModel :: String
     } deriving (Show)
 
--- data  
+data CmdA = CmdA { agda :: String
+                 , task :: String
+                 , conF :: String
+                 , mode :: String
+                 , maxT :: Int 
+                 } deriving (Show, Data, Typeable)
+
+readArgs =
+  CmdA{ agda = def &= help "This flag has no default value. Enter the file name of agda or the entire filepath, eg. Foo.agda" &= typFile
+      , task = def &= help "This flag has no default value. Enter the function type, eg.  not : Bool → Bool " &= typ "SIGNATURE"
+      , conF = "config.json" &=help  "this is a config file, it should be in the current directory or * ~/.agda-gpt-assistant * default value for this flag is config.json" &= typFile
+      , mode = "Pretty" &= help "Choose one of the operating modes. * Pretty * or\n* Debug *  - which has more details. The default value for this flag is Pretty." &= typ "MODE" &= name "m"
+      , maxT = 5 &= help "Set this flag to specify the number of round conversations with ChatGPT. This flag has a default value of 5." &= typ "NUMBER" &= name "l"
+      } &= summary "##################### adga-gpt-assistant #####################\n\nExample: agda-gpt-asistant -a=Test.agda -t=not : Bool → Bool -c=myConfig.json -m=Pretty -l=15" &= details ["More details on the website https://codecredence.com"]
+
+
+
 
 data FromConfig = FromConfig
   { gptApiKey :: String
-  , pathAgdaFileDir :: String
-  , pathAgdaCompiler :: String
-  , f_GptTemp :: FilePath
-  , r_GptTemp :: FilePath
   , gpt_model :: String
   } deriving (Show)
 
 instance FromJSON FromConfig where
   parseJSON = withObject "Config" $ \v -> FromConfig
     <$> v .: "GPT_Api_key"
-    <*> v .: "path_agda_file_dir"
-    <*> v .: "Path_agda_compiler"
-    <*> v .: "first_template_to_gpt"
-    <*> v .: "rest_template_to_gpt"
     <*> v .: "gpt_model"
 
 
@@ -127,3 +137,7 @@ data ConvPart = ConvPart
 
 
 type AGMonad  = RWST AGEnv () [ConvPart] IO  
+
+
+
+
