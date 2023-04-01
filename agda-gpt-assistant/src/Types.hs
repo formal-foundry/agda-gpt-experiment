@@ -84,7 +84,7 @@ data OperationMode =  PrettyMode |  DebugMode
 
 data AGEnv = AGEnv
     { apiKey :: String
-    , agdaFileName :: FilePath
+    , agdaFile :: FilePath
     , taskDescription :: String
     , operationMode :: OperationMode
     , maxTurns :: Int

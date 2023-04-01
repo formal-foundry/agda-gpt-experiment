@@ -72,7 +72,6 @@ gptConv model prompt key oM= do
     PrettyMode -> return ()
     DebugMode -> do
       setSGR [(SetColor Foreground Dull Yellow)]
-      -- mapM (\x -> putStrLn ((show x)++ "\n\n")) rprompt
       putStrLn $ "\n\n\n" ++ show reqb ++ "\n\n\n\n\n"
       putStrLn $ show $ genJsonReq model rprompt      
       putStrLn $ show $  response
@@ -133,19 +132,19 @@ debugMode = do
   state <- get
   let model = gptModel env
       key = apiKey env
-      mode = operationMode env 
+      mode = operationMode env
+      sl = L.length state
+      agdafile =  (agdaFile env)
+      firstPrompt = Message {role = "system", content = "You are a helpful assistant."}
   case mode of
     PrettyMode -> do
       liftIO $ setCursorPosition 0 0
       liftIO clearScreen
     DebugMode -> do
-      liftIO $ putStrLn "Debug Mode"
-  let sl = L.length state 
-  liftIO $ cPrint ("\n\n ############## Attempt number:  " ++ show (sl+1) ++ "  ##############\n\n" )  Cyan 
-  let agdaFile =  (agdaFileName env)
-      firstPrompt = Message {role = "system", content = "You are a helpful assistant."}
+      liftIO $ return ()
       
-
+  liftIO $ cPrint ("\n\n ############## Attempt number:  " ++ show (sl+1) ++ "  ##############\n\n" )  Cyan 
+      
   if sl == 0
   then
     do
@@ -157,8 +156,8 @@ debugMode = do
       answareFromGPT <- liftIO $ gptConv model [promptReq, firstPrompt] key mode 
       let promptRes = Message {role = "assistant" , content = (snd answareFromGPT)}
       liftIO $ cPrint "The following GPT chat prompt was received\n\n" Yellow
-      liftIO $ appendFile agdaFile (fst answareFromGPT)
-      newAfile <- liftIO $ readFile agdaFile
+      liftIO $ appendFile agdafile (fst answareFromGPT)
+      newAfile <- liftIO $ readFile agdafile
 
       case mode of
         DebugMode -> do
@@ -172,7 +171,7 @@ debugMode = do
           liftIO $ putStrLn $ fst answareFromGPT ++ "\n\n"
           
 
-      compiler <- liftIO $ tryToCompile agdaFile
+      compiler <- liftIO $ tryToCompile agdafile
       let newState = (createConvPart fcon answareFromGPT newAfile compiler [ promptRes, promptReq, firstPrompt]  : state)
 
       put newState
@@ -191,7 +190,7 @@ debugMode = do
       liftIO $ cPrint "The following prompt has been sent to GPT chat\n\n" Yellow
       liftIO $ putStrLn $ rcon ++ "\n\n"
       let rPromptReq = Message {role =  "user", content = rcon}
-      let sPrompt =  promptL (L.head state) 
+          sPrompt =  promptL (L.head state) 
       answareFromGPT <- liftIO $ gptConv model (rPromptReq : sPrompt) key  mode
       let rPromptRes = Message {role = "assistant", content = (snd answareFromGPT)}
       liftIO $ cPrint "The following GPT chat prompt was received\n\n" Yellow 
@@ -208,9 +207,9 @@ debugMode = do
 
       liftIO $ rmAFile env
       liftIO $ cpAFile env
-      liftIO $ appendFile agdaFile (fst answareFromGPT)
-      newAfile <- liftIO $ readFile agdaFile
-      compiler <- liftIO $ tryToCompile agdaFile
+      liftIO $ appendFile agdafile (fst answareFromGPT)
+      newAfile <- liftIO $ readFile agdafile
+      compiler <- liftIO $ tryToCompile agdafile
       liftIO $ cPrint "New agda file, with GTP answare \n\n" Magenta
       liftIO $ putStrLn newAfile  
       let newState = (createConvPart rcon answareFromGPT newAfile compiler (rPromptRes:rPromptReq:sPrompt)  : state)
@@ -241,7 +240,7 @@ createConvPart gptIn gptOut afile acres fp =
 fConvInput :: AGEnv -> IO String
 fConvInput env = do
     templ <- readFile $ fGptTemp env
-    agda <- readFile $  (agdaFileName env) 
+    agda <- readFile $  (agdaFile env) 
     let x1 = replaceText templ "{function_type}" (taskDescription env)
     let x2 = replaceText x1 "{agda_code}" agda
     return x2
@@ -249,7 +248,7 @@ fConvInput env = do
 rConvInput :: String -> AGEnv -> String -> IO String
 rConvInput cf env err = do
     templ <- readFile $ rGptTemp env
-    agda <- readFile $  (agdaFileName env) 
+    agda <- readFile $  (agdaFile env)
     let x1 = replaceText templ "{agda_code_with_changes}" cf
     let x2 = replaceText x1 "{compiler_errors}"  err
     return x2

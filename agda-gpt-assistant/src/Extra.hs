@@ -47,17 +47,17 @@ cPrint s c = do
   
 cpFile :: AGEnv -> IO ()
 cpFile env = do
-  system $ "cp "  ++ (agdaFileName env) ++ " "  ++ (agdaFileName env) ++ ".bak"
+  system $ "cp "  ++ (agdaFile env) ++ " "  ++ (agdaFile env) ++ ".bak"
   return ()
 
 cpAFile :: AGEnv -> IO ()
 cpAFile env = do
-  system $ "cp " ++ (agdaFileName env) ++ ".bak" ++ " " ++ (agdaFileName env)
+  system $ "cp " ++ (agdaFile env) ++ ".bak" ++ " " ++ (agdaFile env)
   return ()
 
 rmAFile :: AGEnv -> IO ()
 rmAFile env = do
-  system $ "rm " ++  (agdaFileName env)
+  system $ "rm " ++  (agdaFile env)
   return ()
 
 
@@ -101,3 +101,4 @@ check_config conf = do
           cPrint ("I can't find " ++ conf ++ ", check it in currnet dir or ~/.agda-gpt-assistant/\n") Red
           putStrLn "--"
           die "Something went wrong, try one more time"
+
