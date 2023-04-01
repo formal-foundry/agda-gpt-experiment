@@ -1,8 +1,0 @@
-{
-  "GPT_Api_key": "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",
-  "path_agda_file_dir": "/home/kryn/tt/agda-gpt-assistant/agda-gpt-assistant/data/",
-  "Path_agda_compiler": "/home/kryn/.cabal/bin/agda",
-  "first_template_to_gpt" : "/home/kryn/tt/agda-gpt-assistant/agda-gpt-assistant/data/config/gpt_f.txt",
-  "rest_template_to_gpt" : "/home/kryn/tt/agda-gpt-assistant/agda-gpt-assistant/data/config/gpt_r.txt",
-  "gpt_model" : "gpt-3.5-turbo"
-}
