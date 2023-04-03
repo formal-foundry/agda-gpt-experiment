@@ -19,12 +19,15 @@ import System.Environment (getArgs)
 import System.Process
 import System.Console.ANSI
 import System.Exit
+import System.FilePath (splitFileName)
+import System.Directory
 
 import Data.Aeson as A
 import Control.Monad.Trans.RWS 
 
 main :: IO ()
-main = loadConfigAndRun  mainAG
+main = do
+  loadConfigAndRun  mainAG
 
  
 loadConfigAndRun :: (AGEnv  -> IO ()) -> IO ()
@@ -35,6 +38,7 @@ loadConfigAndRun mainAG = do
   agda <- check_agda (agda args)
   conf <- check_config (conF args)
   config  <- (A.decodeFileStrict conf) :: IO (Maybe FromConfig)
+  ts <- timestamp
   let md = mode args
   case config of
     Nothing -> do
@@ -42,14 +46,20 @@ loadConfigAndRun mainAG = do
      putStrLn "--"
      die "Something went wrong, try one more time"
     Just c ->
-             let 
+             let
+             (path, file) =  splitFileName agda  
+             newAF = "AGA-"++ file 
+             pureF = take (length file -5 )file
+             dirN = pureF ++"_"++ts
              m = case md of
                       "Pretty" -> PrettyMode
                       _        -> DebugMode
                  
              env = AGEnv
                { apiKey = gptApiKey c
-               , agdaFile = agda
+               , orgAgdaF = agda
+               , dirName = dirN
+               , agdaFile = newAF
                , taskDescription = (task args)
                , operationMode = m
                , maxTurns = maxT args
@@ -62,12 +72,14 @@ loadConfigAndRun mainAG = do
 
 mainAG :: AGEnv -> IO ()
 mainAG env = do
-  checkAgdaF <- G.tryToCompile $  (agdaFile env)
+  checkAgdaF <- G.tryToCompile $  (orgAgdaF env)
   case checkAgdaF of
     Just x -> do
-       cPrint  ("Incorrect  agda File:  " ++ (agdaFile env) ++ "\n\n" ++ "COMPILER ERROR: " ++ x ) Red 
+       cPrint  ("Incorrect  agda File:  " ++ (orgAgdaF env) ++ "\n\n" ++ "COMPILER ERROR: " ++ x ) Red 
     Nothing -> do
                initInfo env
+               copyFile (orgAgdaF env) ("./"++(agdaFile env))
+               createDirectory (dirName env)
                conversation env []
 
 
@@ -95,11 +107,11 @@ initInfo env = do
   putStrLn "\n\n\n###############################################"
   putStrLn "Started with the following data:\n\n"
   setSGR [Reset]
-  putStrLn $"TASK:  " ++ (taskDescription env) ++ "\n\n"
-  putStrLn $"MODE:  " ++ (show (operationMode env)) ++ "\n\n"
-  putStrLn $"MAX TURN :  " ++ (show (maxTurns env)) ++ "\n\n"
-  putStrLn $"MODEL:  " ++ (gptModel env) ++ "\n\n"
-  agdaFile <- readFile  (agdaFile env)
+  putStrLn $ "TASK:  " ++ (taskDescription env) ++ "\n\n"
+  putStrLn $ "MODE:  " ++ (show (operationMode env)) ++ "\n\n"
+  putStrLn $ "MAX TURN :  " ++ (show (maxTurns env)) ++ "\n\n"
+  putStrLn $ "MODEL:  " ++ (gptModel env) ++ "\n\n"
+  agdaFile <- readFile  (orgAgdaF env)
   setSGR [(SetConsoleIntensity BoldIntensity)]
   putStrLn "AGDA_CODE: \n\n" 
   setSGR [(Reset)]
@@ -109,5 +121,11 @@ initInfo env = do
       setCursorPosition 0 0
       clearScreen
     DebugMode -> return ()
+
+
+
+
+
+
 
 

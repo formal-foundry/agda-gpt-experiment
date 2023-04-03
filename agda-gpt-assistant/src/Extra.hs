@@ -25,6 +25,11 @@ import System.Process as SP
 import qualified Data.List as L
 import Data.List.Split as DLS(splitOn)
 
+
+import Data.Time.Clock.POSIX
+import Data.Time.Format 
+
+
 import System.Console.ANSI
 
 
@@ -82,7 +87,7 @@ check_agda file = do
   case l of
     True -> return file
     False -> do
-       cPrint ("I can't find "++ file ) Red
+       cPrint ("I can't find agda file: "++ file ) Red
        putStrLn "--"
        die "Something went wrong, try one more time"
 
@@ -102,3 +107,10 @@ check_config conf = do
           putStrLn "--"
           die "Something went wrong, try one more time"
 
+
+
+timestamp :: IO String
+timestamp = do
+  current <- getPOSIXTime
+  let formatted = formatTime defaultTimeLocale "%H:%M:%S" (posixSecondsToUTCTime current)
+  return formatted

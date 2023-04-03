@@ -84,6 +84,8 @@ data OperationMode =  PrettyMode |  DebugMode
 
 data AGEnv = AGEnv
     { apiKey :: String
+    , orgAgdaF :: String
+    , dirName :: String
     , agdaFile :: FilePath
     , taskDescription :: String
     , operationMode :: OperationMode
@@ -93,20 +95,21 @@ data AGEnv = AGEnv
     , gptModel :: String
     } deriving (Show)
 
-data CmdA = CmdA { agda :: String
+data Aga = Aga { agda :: String
                  , task :: String
                  , conF :: String
                  , mode :: String
                  , maxT :: Int 
                  } deriving (Show, Data, Typeable)
 
+readArgs :: Aga
 readArgs =
-  CmdA{ agda = def &= help "This flag has no default value. Enter the file name of agda or the entire filepath, eg. Foo.agda" &= typFile
+  Aga{ agda = def &= help "This flag has no default value. Enter the file name of agda or the entire filepath, eg. Foo.agda" &= typFile
       , task = def &= help "This flag has no default value. Enter the function type, eg.  not : Bool → Bool " &= typ "SIGNATURE"
       , conF = "config.json" &=help  "this is a config file, it should be in the current directory or * ~/.agda-gpt-assistant * default value for this flag is config.json" &= typFile
       , mode = "Pretty" &= help "Choose one of the operating modes. * Pretty * or\n* Debug *  - which has more details. The default value for this flag is Pretty." &= typ "MODE" &= name "m"
       , maxT = 5 &= help "Set this flag to specify the number of round conversations with ChatGPT. This flag has a default value of 5." &= typ "NUMBER" &= name "l"
-      } &= summary "##################### adga-gpt-assistant #####################\n\nExample: agda-gpt-asistant -a=Test.agda -t=not : Bool → Bool -c=myConfig.json -m=Pretty -l=15" &= details ["More details on the website https://codecredence.com"]
+      } &= summary "##################### adga-gpt-assistant #####################\n\nExample: aga -a=Test.agda -t=not : Bool → Bool -c=myConfig.json -m=Pretty -l=15" &= details ["More details on the website https://codecredence.com"]
 
 
 
@@ -120,9 +123,6 @@ instance FromJSON FromConfig where
   parseJSON = withObject "Config" $ \v -> FromConfig
     <$> v .: "GPT_Api_key"
     <*> v .: "gpt_model"
-
-
-
 
 
 
