@@ -38,6 +38,7 @@ dependencies:
 - cmdargs
 - directory
 - time >= 1.11.1.1
+- http-types
 
 
 

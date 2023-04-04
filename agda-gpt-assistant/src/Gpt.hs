@@ -25,10 +25,11 @@ import System.Console.ANSI
 import System.Exit
 import System.FilePath (splitFileName)
 import System.Directory
+import System.Environment (getEnv)
 
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-
+import Network.HTTP.Types.Status
 
 
 
@@ -65,22 +66,27 @@ gptConv model prompt key oM= do
   manager <- newManager tlsManagerSettings
   let reqb = createGptRequest model rprompt key
   request <- return (createGptRequest model rprompt key)
-
   response <- httpLbs reqb manager
+  let code = (statusCode $ responseStatus response)
+  case code of
+    200 -> do
+      case oM of
+        PrettyMode -> return ()
+        DebugMode -> do
+          setSGR [(SetColor Foreground Dull Yellow)]
+          putStrLn $ "\n\n\n" ++ show reqb ++ "\n\n\n\n\n"
+          putStrLn $ show $ genJsonReq model rprompt      
+          putStrLn $ show $  response
 
-  case oM of
-    PrettyMode -> return ()
-    DebugMode -> do
-      setSGR [(SetColor Foreground Dull Yellow)]
-      putStrLn $ "\n\n\n" ++ show reqb ++ "\n\n\n\n\n"
-      putStrLn $ show $ genJsonReq model rprompt      
-      putStrLn $ show $  response
-
-      setSGR [Reset]
-  return ()
-  return $  (plainCode  (decodeRes $ responseBody response),
-            ( decodeRes $ responseBody response))
-
+          setSGR [Reset]
+      return ()
+      return $  (plainCode  (decodeRes $ responseBody response),
+                ( decodeRes $ responseBody response))
+    _ -> do
+      cPrint ("CODE: " ++ (show code) ++ "\n\n")  Red
+      cPrint ( show response ) Red
+      putStrLn "--"
+      die "Something went wrong, try one more time" 
 
 plainCode :: String ->  String
 plainCode res =
@@ -111,10 +117,11 @@ tryToCompile :: String -> IO (Maybe String)
 tryToCompile fp = do
   let (path, file) =  splitFileName fp
   aReq <- runProcess_ path file
+  p  <- getEnv "PWD"
   case aReq of
     Nothing -> return Nothing
     Just re -> do
-                return $ Just $ replaceStringLoop path "" re
+                return $ Just $ replaceStringLoop (p++"/") "" re
       
 runProcess_ ::  FilePath -> String -> IO (Maybe String)
 runProcess_ pwd afile = do
@@ -144,39 +151,47 @@ debugMode = do
       a_log = (dir++"/agda.log")
       gA_log = (dir++"/all_gpt.log")
       gC_log = (dir++"/code_gpt.log")
-      r = "REASPONSE\n\n"
-      p = "PROMPT\n\n"
-      at_info = "\n\n ############## Attempt number:  " ++ show (sl+1) ++ "  ##############\n\n"
+      only_code = ("state_code_gpt.log")
+      r = "\n\nREASPONSE:  \n\n"
+      p = "\n\nPROMPT:  \n\n"
+      at_info = "\n ############## Attempt number:  " ++ show (sl+1) ++ "  ##############\n\n"
       firstPrompt = Message {role = "system", content = "You are a helpful assistant."}
   case mode of
     PrettyMode -> do
-      liftIO $ setCursorPosition 0 0
-      liftIO clearScreen
+      return ()
+      -- liftIO clearLine
     DebugMode -> do
       liftIO $ return ()
-      
-  liftIO $ cPrint ("\n\n ############## Attempt number:  " ++ show (sl+1) ++ "  ##############\n\n" )  Cyan 
+  
+  liftIO $ cPrint at_info  Cyan 
       
   if sl == 0
   then
     do
-      aF_content <- liftIO $ readFile agdafile
-      liftIO $ appendFile a_log  aF_content
+      contentAfile <- liftIO $ readFile agdafile
+      liftIO $ appendFile a_log  "#########################  Initial data  #########################\n\n"
+      liftIO $ appendFile a_log  contentAfile
       fcon <- liftIO $ fConvInput env
+      -- liftIO clearScreen
       liftIO $ cPrint "The following prompt has been sent to GPT chat\n\n" Yellow
       liftIO $ putStrLn $ fcon ++ "\n\n"
       liftIO $ appendFile gC_log  at_info
       liftIO $ appendFile gA_log  at_info
-      liftIO $ appendFile gA_log ("\n\n" ++ fcon)
+      liftIO $ appendFile gA_log (p ++ fcon)
       let promptReq = Message {role = "user", content = fcon}
       answareFromGPT <- liftIO $ gptConv model [promptReq, firstPrompt] key mode
-      liftIO $ appendFile gC_log (p++(fcon))
       liftIO $ appendFile gC_log  (r++(fst answareFromGPT))
-      -- liftIO $ appendFile  ("\n\n" ++ "c")      
+      liftIO $ writeFile only_code (fst answareFromGPT)
+      liftIO $ appendFile gA_log  (r++(snd answareFromGPT))
       let promptRes = Message {role = "assistant" , content = (snd answareFromGPT)}
+      -- liftIO clearScreen
       liftIO $ cPrint "The following GPT chat reasponse was received\n\n" Yellow
       liftIO $ appendFile agdafile (fst answareFromGPT)
       newAfile <- liftIO $ readFile agdafile
+      liftIO  $ writeFile only_code  at_info
+      liftIO $ appendFile only_code (fst answareFromGPT)
+      liftIO  $ appendFile a_log  at_info
+      liftIO $ appendFile a_log ("\n\n" ++newAfile)     
       case mode of
         DebugMode -> do
           liftIO $ putStrLn $ snd answareFromGPT ++ "\n\n"
@@ -193,6 +208,7 @@ debugMode = do
       let newState = (createConvPart fcon answareFromGPT newAfile compiler [ promptRes, promptReq, firstPrompt]  : state)
 
       put newState
+      -- liftIO $ clearScreen
       liftIO $ cPrint "New agda file, with GTP answare \n\n" Magenta
       liftIO $ putStrLn $ newAfile ++ "\n\n"
 
@@ -210,10 +226,16 @@ debugMode = do
       rcon <- liftIO $ rConvInput  (current_agad_file (L.head state))  env (fromJust(agda_res (L.head state)))
       liftIO $ cPrint "The following prompt has been sent to GPT chat\n\n" Yellow
       liftIO $ putStrLn $ rcon ++ "\n\n"
+      liftIO $ appendFile gA_log  ("\n\n"++ at_info)
+      liftIO $ appendFile gA_log (p ++ rcon) 
       let rPromptReq = Message {role =  "user", content = rcon}
           sPrompt =  promptL (L.head state) 
       answareFromGPT <- liftIO $ gptConv model (rPromptReq : sPrompt) key  mode
-
+      liftIO $ appendFile gA_log (r ++ (snd answareFromGPT))
+      liftIO $ appendFile gC_log  ("\n\n"++ at_info)
+      liftIO $ appendFile gC_log  (r++(fst answareFromGPT))
+      liftIO  $ writeFile only_code  at_info
+      liftIO $ appendFile only_code (fst answareFromGPT)
       let rPromptRes = Message {role = "assistant", content = (snd answareFromGPT)}
       liftIO $ cPrint "The following GPT chat reasponse  was received\n\n" Yellow 
       case mode of
@@ -230,7 +252,6 @@ debugMode = do
         "EMPTY!!!" -> do
            liftIO $ cPrint "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" Red 
            liftIO $ putStrLn "chatGPT hasn't reasponse code"
-           -- liftIO $ appendFile agdafile (fst answareFromGPT)
         _ -> do 
           liftIO $ rmAFile env
           liftIO $ copyFile (orgAgdaF env) (agdaFile env)
@@ -239,8 +260,8 @@ debugMode = do
 
       newAfile <- liftIO $ readFile agdafile
       compiler <- liftIO $ tryToCompile agdafile
-      liftIO $ appendFile gC_log (p++(rcon))
-      liftIO $ appendFile gC_log  (r++(fst answareFromGPT))
+      liftIO  $ appendFile a_log  at_info
+      liftIO $ appendFile a_log newAfile
       liftIO $ cPrint "New agda file, with GTP answare \n\n" Magenta
       liftIO $ putStrLn newAfile  
       let newState = (createConvPart rcon answareFromGPT newAfile compiler (rPromptRes:rPromptReq:sPrompt)  : state)
@@ -250,8 +271,6 @@ debugMode = do
                    return Nothing
         Just x -> do
                   liftIO $ cPrint ("The agda compiler response with the following errors\n\n" ++ x) Red
-                  -- liftIO $ rmAFile env
-                  -- liftIO $ cpAFile env
                   return (Just x)
 
 

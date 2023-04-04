@@ -49,7 +49,7 @@ loadConfigAndRun mainAG = do
              let
              (path, file) =  splitFileName agda  
              newAF = "AGA-"++ file 
-             pureF = take (length file -5 )file
+             pureF = take (length file - 5 )file
              dirN = pureF ++"_"++ts
              m = case md of
                       "Pretty" -> PrettyMode
@@ -78,7 +78,7 @@ mainAG env = do
        cPrint  ("Incorrect  agda File:  " ++ (orgAgdaF env) ++ "\n\n" ++ "COMPILER ERROR: " ++ x ) Red 
     Nothing -> do
                initInfo env
-               copyFile (orgAgdaF env) ("./"++(agdaFile env))
+               copyFile (orgAgdaF env) ((agdaFile env))
                createDirectory (dirName env)
                conversation env []
 
@@ -94,11 +94,11 @@ conversation env cP = do
         do
           conversation env state
         else do
-        cPrint "Too many attempts, GPT-Agda fail. Increase max turn or change agda task for GPT." Red
+        cPrint "Too many attempts, GPT-Agda fail. Increase max turn or change agda task for GPT. \n Check logs files." Red
 
     Nothing ->do
       setSGR [(SetColor Foreground Dull Green)]
-      putStrLn $ "Compilation succeeded in " ++ (show l) ++ " attempts. Check new agda File" 
+      putStrLn $ "Compilation succeeded in " ++ (show l) ++ " attempts. Check new AGA- File" 
       setSGR [Reset]
 
 initInfo :: AGEnv ->  IO ()
@@ -118,13 +118,9 @@ initInfo env = do
   putStrLn agdaFile
   case operationMode env of
     PrettyMode -> do
-      setCursorPosition 0 0
       clearScreen
+      setCursorPosition 0 0
     DebugMode -> return ()
-
-
-
-
 
 
 

@@ -44,6 +44,7 @@ library
     , haskeline
     , http-client
     , http-client-tls
+    , http-types
     , mtl
     , process
     , regex-posix
@@ -73,6 +74,7 @@ executable aga
     , haskeline
     , http-client
     , http-client-tls
+    , http-types
     , mtl
     , process
     , regex-posix
@@ -103,6 +105,7 @@ test-suite agda-gpt-assistant-test
     , haskeline
     , http-client
     , http-client-tls
+    , http-types
     , mtl
     , process
     , regex-posix

@@ -1,0 +1,10 @@
+
+ ############## Attempt number:  3  ##############
+
+
+thm : ∀ s m → isFinished (update s m) → ⊥
+thm _ (initialize x) ()
+thm _ increment ()
+thm (counting x) (initialize _) ()
+thm (counting x) increment p = thm (counting (suc x)) increment p
+thm finished _ ()
