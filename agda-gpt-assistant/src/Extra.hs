@@ -49,22 +49,6 @@ cPrint s c = do
   setSGR [Reset]
 
 
-  
-cpFile :: AGEnv -> IO ()
-cpFile env = do
-  system $ "cp "  ++ (agdaFile env) ++ " "  ++ (agdaFile env) ++ ".bak"
-  return ()
-
-cpAFile :: AGEnv -> IO ()
-cpAFile env = do
-  system $ "cp " ++ (agdaFile env) ++ ".bak" ++ " " ++ (agdaFile env)
-  return ()
-
-rmAFile :: AGEnv -> IO ()
-rmAFile env = do
-  system $ "rm " ++  (agdaFile env)
-  return ()
-
 
 check_promt :: String ->  IO String
 check_promt s = do
@@ -114,3 +98,15 @@ timestamp = do
   current <- getPOSIXTime
   let formatted = formatTime defaultTimeLocale "%H:%M:%S" (posixSecondsToUTCTime current)
   return formatted
+
+
+trimPrompt :: [Message] -> [Message]
+trimPrompt ml =
+  let l = L.length ml in 
+  if (L.length ml) <= 16 then ml
+  else
+    let (p1:p2:x)= ml in
+      p1 : p2 : (L.drop (l - 10) ml)
+    
+    
+

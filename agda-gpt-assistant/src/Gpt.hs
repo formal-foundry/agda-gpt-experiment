@@ -61,8 +61,7 @@ createGptRequest model prompt key = request
 
 gptConv ::  String -> [Message] -> String -> OperationMode -> IO (String, String)
 gptConv model prompt key oM= do
-  let rprompt = L.reverse prompt 
-
+  let rprompt = L.reverse (trimPrompt prompt) 
   manager <- newManager tlsManagerSettings
   let reqb = createGptRequest model rprompt key
   request <- return (createGptRequest model rprompt key)
@@ -71,15 +70,17 @@ gptConv model prompt key oM= do
   case code of
     200 -> do
       case oM of
-        PrettyMode -> return ()
+        -- PrettyMode -> return ()
+        PrettyMode -> do
+          putStrLn $ show (length prompt)
+          mapM (\x -> putStrLn ((show x)++ "\n\n")) prompt
+          return ()
         DebugMode -> do
           setSGR [(SetColor Foreground Dull Yellow)]
           putStrLn $ "\n\n\n" ++ show reqb ++ "\n\n\n\n\n"
           putStrLn $ show $ genJsonReq model rprompt      
           putStrLn $ show $  response
-
           setSGR [Reset]
-      return ()
       return $  (plainCode  (decodeRes $ responseBody response),
                 ( decodeRes $ responseBody response))
     _ -> do
@@ -253,7 +254,8 @@ debugMode = do
            liftIO $ cPrint "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" Red 
            liftIO $ putStrLn "chatGPT hasn't reasponse code"
         _ -> do 
-          liftIO $ rmAFile env
+          -- liftIO $ rmAFile env
+          liftIO $ removeFile agdafile
           liftIO $ copyFile (orgAgdaF env) (agdaFile env)
           liftIO $ appendFile agdafile (fst answareFromGPT)
          

@@ -1,10 +1,10 @@
 
- ############## Attempt number:  3  ##############
+ ############## Attempt number:  17  ##############
 
 
 thm : ∀ s m → isFinished (update s m) → ⊥
-thm _ (initialize x) ()
-thm _ increment ()
-thm (counting x) (initialize _) ()
-thm (counting x) increment p = thm (counting (suc x)) increment p
-thm finished _ ()
+thm _ (initialize _) () = ⊥.elim
+thm _ increment () = ⊥.elim
+thm (counting x) (initialize x₁) () = ⊥.elim
+thm (counting x) increment p = snd⊥ p
+thm finished _ p = fst⊥ p
