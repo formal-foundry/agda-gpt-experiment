@@ -42,12 +42,23 @@ import Data.Text as T
 import System.Exit
 import System.FilePath (splitFileName)
 
+import Control.Concurrent
+
 cPrint :: String -> Color -> IO ()
 cPrint s c = do
   setSGR [(SetColor Foreground Dull c )]
   putStrLn s
   setSGR [Reset]
 
+
+-- cPrint :: String -> Color -> IO ()
+-- cPrint s c = do
+--   setSGR [(SetColor Foreground Dull c )]
+--   clearScreen
+--   threadDelay 7000000 -- microSec
+--   setCursorPosition 0 0 
+--   putStrLn s
+--   setSGR [Reset]
 
 
 check_promt :: String ->  IO String

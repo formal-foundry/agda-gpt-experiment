@@ -31,6 +31,7 @@ import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types.Status
 
+import Control.Concurrent
 
 
 decodeRes :: BL.ByteString -> String
@@ -70,10 +71,9 @@ gptConv model prompt key oM= do
   case code of
     200 -> do
       case oM of
-        -- PrettyMode -> return ()
         PrettyMode -> do
-          putStrLn $ show (length prompt)
-          mapM (\x -> putStrLn ((show x)++ "\n\n")) prompt
+          -- putStrLn $ show (length prompt)
+          -- mapM (\x -> putStrLn ((show x)++ "\n\n")) prompt
           return ()
         DebugMode -> do
           setSGR [(SetColor Foreground Dull Yellow)]
@@ -160,10 +160,12 @@ debugMode = do
   case mode of
     PrettyMode -> do
       return ()
-      -- liftIO clearLine
     DebugMode -> do
       liftIO $ return ()
-  
+
+
+  liftIO $ clearScreen
+  liftIO $ setCursorPosition 0 0
   liftIO $ cPrint at_info  Cyan 
       
   if sl == 0
@@ -173,7 +175,6 @@ debugMode = do
       liftIO $ appendFile a_log  "#########################  Initial data  #########################\n\n"
       liftIO $ appendFile a_log  contentAfile
       fcon <- liftIO $ fConvInput env
-      -- liftIO clearScreen
       liftIO $ cPrint "The following prompt has been sent to GPT chat\n\n" Yellow
       liftIO $ putStrLn $ fcon ++ "\n\n"
       liftIO $ appendFile gC_log  at_info
@@ -185,7 +186,9 @@ debugMode = do
       liftIO $ writeFile only_code (fst answareFromGPT)
       liftIO $ appendFile gA_log  (r++(snd answareFromGPT))
       let promptRes = Message {role = "assistant" , content = (snd answareFromGPT)}
-      -- liftIO clearScreen
+      liftIO $ threadDelay 1000000
+      liftIO $ clearScreen
+      liftIO $ setCursorPosition 0 0     
       liftIO $ cPrint "The following GPT chat reasponse was received\n\n" Yellow
       liftIO $ appendFile agdafile (fst answareFromGPT)
       newAfile <- liftIO $ readFile agdafile
@@ -209,15 +212,21 @@ debugMode = do
       let newState = (createConvPart fcon answareFromGPT newAfile compiler [ promptRes, promptReq, firstPrompt]  : state)
 
       put newState
+      -- liftIO $ threadDelay 3000000
       -- liftIO $ clearScreen
-      liftIO $ cPrint "New agda file, with GTP answare \n\n" Magenta
-      liftIO $ putStrLn $ newAfile ++ "\n\n"
+      -- liftIO $ setCursorPosition 0 0
+      -- liftIO $ cPrint "New agda file, with GTP answare \n\n" Magenta
+      -- liftIO $ putStrLn $ newAfile ++ "\n\n"
 
       case compiler of
         Nothing -> do
                    return Nothing
         Just x -> do
+                  liftIO $ threadDelay 3000000
+                  liftIO $ clearScreen
+                  liftIO $ setCursorPosition 0 0
                   liftIO $ cPrint ("The agda compiler response with the following errors\n\n" ++ x) Red
+                  liftIO $ threadDelay 3000000 
                   return (Just x)
 
 -- __________ >0
@@ -225,6 +234,9 @@ debugMode = do
   else 
     do
       rcon <- liftIO $ rConvInput  (current_agad_file (L.head state))  env (fromJust(agda_res (L.head state)))
+      -- liftIO $ threadDelay 3000000
+      -- liftIO $ clearScreen
+      -- liftIO $ setCursorPosition 0 0
       liftIO $ cPrint "The following prompt has been sent to GPT chat\n\n" Yellow
       liftIO $ putStrLn $ rcon ++ "\n\n"
       liftIO $ appendFile gA_log  ("\n\n"++ at_info)
@@ -238,6 +250,9 @@ debugMode = do
       liftIO  $ writeFile only_code  at_info
       liftIO $ appendFile only_code (fst answareFromGPT)
       let rPromptRes = Message {role = "assistant", content = (snd answareFromGPT)}
+      liftIO $ threadDelay 1000000
+      liftIO $ clearScreen
+      liftIO $ setCursorPosition 0 0
       liftIO $ cPrint "The following GPT chat reasponse  was received\n\n" Yellow 
       case mode of
         DebugMode -> do
@@ -252,7 +267,7 @@ debugMode = do
       case (fst answareFromGPT) of
         "EMPTY!!!" -> do
            liftIO $ cPrint "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" Red 
-           liftIO $ putStrLn "chatGPT hasn't reasponse code"
+           liftIO $ putStrLn "ChatGPT hasn't responsed with any code"
         _ -> do 
           -- liftIO $ rmAFile env
           liftIO $ removeFile agdafile
@@ -264,15 +279,22 @@ debugMode = do
       compiler <- liftIO $ tryToCompile agdafile
       liftIO  $ appendFile a_log  at_info
       liftIO $ appendFile a_log newAfile
-      liftIO $ cPrint "New agda file, with GTP answare \n\n" Magenta
-      liftIO $ putStrLn newAfile  
+      -- liftIO $ threadDelay 3000000
+      -- liftIO $ clearScreen
+      -- liftIO $ setCursorPosition 0 0
+      -- liftIO $ cPrint "New agda file, with GTP answare \n\n" Magenta
+      -- liftIO $ putStrLn newAfile  
       let newState = (createConvPart rcon answareFromGPT newAfile compiler (rPromptRes:rPromptReq:sPrompt)  : state)
       put newState
       case compiler of
         Nothing -> do
                    return Nothing
         Just x -> do
+                  liftIO $ threadDelay 3000000
+                  liftIO $ clearScreen
+                  liftIO $ setCursorPosition 0 0
                   liftIO $ cPrint ("The agda compiler response with the following errors\n\n" ++ x) Red
+                  liftIO $ threadDelay 3000000
                   return (Just x)
 
 

@@ -25,9 +25,44 @@ import System.Directory
 import Data.Aeson as A
 import Control.Monad.Trans.RWS 
 
+import Control.Concurrent
+
+import System.IO
+
 main :: IO ()
 main = do
   loadConfigAndRun  mainAG
+
+
+
+
+
+-- -- set cursor to a processing cursor
+-- setProcessingCursor :: IO ()
+-- setProcessingCursor = do
+--   hPutStr stdout "\ESC[?25l"
+  
+--   let spinner = "|/-\\"
+  
+--   -- output the spinning wheel characters repeatedly
+--   let loop i = do
+--         -- move the cursor to the beginning of the line
+--         hPutStr stdout "\r"
+        
+--         -- output the next spinning wheel character
+--         hPutChar stdout (spinner !! (i `mod` length spinner))
+        
+--         -- flush the output buffer
+--         hFlush stdout
+        
+--         -- sleep for a short amount of time
+--         threadDelay 100000
+        
+--         -- call the loop function recursively with the next index
+--         loop (i+1)
+  
+--   loop 0
+
 
  
 loadConfigAndRun :: (AGEnv  -> IO ()) -> IO ()
@@ -78,6 +113,7 @@ mainAG env = do
        cPrint  ("Incorrect  agda File:  " ++ (orgAgdaF env) ++ "\n\n" ++ "COMPILER ERROR: " ++ x ) Red 
     Nothing -> do
                initInfo env
+               threadDelay 3000000
                copyFile (orgAgdaF env) ((agdaFile env))
                createDirectory (dirName env)
                conversation env []
@@ -98,11 +134,15 @@ conversation env cP = do
 
     Nothing ->do
       setSGR [(SetColor Foreground Dull Green)]
-      putStrLn $ "Compilation succeeded in " ++ (show l) ++ " attempts. Check new AGA- File" 
+      clearScreen
+      setCursorPosition 0 0
+      putStrLn $ "Compilation succeeded in " ++ (show l) ++ " attempts. Check new "++ (agdaFile env) ++ " File" 
       setSGR [Reset]
 
 initInfo :: AGEnv ->  IO ()
 initInfo env = do
+  clearScreen
+  setCursorPosition 0 0 
   setSGR [(SetColor Foreground Dull Blue)]
   putStrLn "\n\n\n###############################################"
   putStrLn "Started with the following data:\n\n"
@@ -111,17 +151,15 @@ initInfo env = do
   putStrLn $ "MODE:  " ++ (show (operationMode env)) ++ "\n\n"
   putStrLn $ "MAX TURN :  " ++ (show (maxTurns env)) ++ "\n\n"
   putStrLn $ "MODEL:  " ++ (gptModel env) ++ "\n\n"
-  agdaFile <- readFile  (orgAgdaF env)
-  setSGR [(SetConsoleIntensity BoldIntensity)]
-  putStrLn "AGDA_CODE: \n\n" 
-  setSGR [(Reset)]
-  putStrLn agdaFile
-  case operationMode env of
-    PrettyMode -> do
-      clearScreen
-      setCursorPosition 0 0
-    DebugMode -> return ()
-
-
-
+  -- agdaFile <- readFile  (orgAgdaF env)
+  -- setSGR [(SetConsoleIntensity BoldIntensity)]
+  -- putStrLn "AGDA_CODE: \n\n" 
+  -- setSGR [(Reset)]
+  -- putStrLn agdaFile
+  
+  -- case operationMode env of
+  --   PrettyMode -> do
+  --     clearScreen
+  --     setCursorPosition 0 0
+  --   DebugMode -> return ()
 
