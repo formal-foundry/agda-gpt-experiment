@@ -31,6 +31,7 @@ import System.IO
 
 main :: IO ()
 main = do
+  hPutStr stdout "\ESC[?25l"
   loadConfigAndRun  mainAG
 
 
@@ -113,7 +114,7 @@ mainAG env = do
        cPrint  ("Incorrect  agda File:  " ++ (orgAgdaF env) ++ "\n\n" ++ "COMPILER ERROR: " ++ x ) Red 
     Nothing -> do
                initInfo env
-               threadDelay 3000000
+               threadDelay 1500000
                copyFile (orgAgdaF env) ((agdaFile env))
                createDirectory (dirName env)
                conversation env []
@@ -130,13 +131,13 @@ conversation env cP = do
         do
           conversation env state
         else do
-        cPrint "Too many attempts, GPT-Agda fail. Increase max turn or change agda task for GPT. \n Check logs files." Red
+        cPrint "Too many attempts, Agda-GPT-Assistan fail. Increase max turn or change agda task for GPT. \n Check logs files." Red
 
     Nothing ->do
       setSGR [(SetColor Foreground Dull Green)]
       clearScreen
       setCursorPosition 0 0
-      putStrLn $ "Compilation succeeded in " ++ (show l) ++ " attempts. Check new "++ (agdaFile env) ++ " File" 
+      putStrLn $ "Compilation succeeded in " ++ (show l) ++ " attempts. Check new "++ (agdaFile env) ++ " file" 
       setSGR [Reset]
 
 initInfo :: AGEnv ->  IO ()
@@ -145,21 +146,11 @@ initInfo env = do
   setCursorPosition 0 0 
   setSGR [(SetColor Foreground Dull Blue)]
   putStrLn "\n\n\n###############################################"
-  putStrLn "Started with the following data:\n\n"
+  putStrLn "Agda-GPT-Assistant started with the following flags:\n\n"
   setSGR [Reset]
   putStrLn $ "TASK:  " ++ (taskDescription env) ++ "\n\n"
   putStrLn $ "MODE:  " ++ (show (operationMode env)) ++ "\n\n"
   putStrLn $ "MAX TURN :  " ++ (show (maxTurns env)) ++ "\n\n"
   putStrLn $ "MODEL:  " ++ (gptModel env) ++ "\n\n"
-  -- agdaFile <- readFile  (orgAgdaF env)
-  -- setSGR [(SetConsoleIntensity BoldIntensity)]
-  -- putStrLn "AGDA_CODE: \n\n" 
-  -- setSGR [(Reset)]
-  -- putStrLn agdaFile
   
-  -- case operationMode env of
-  --   PrettyMode -> do
-  --     clearScreen
-  --     setCursorPosition 0 0
-  --   DebugMode -> return ()
 

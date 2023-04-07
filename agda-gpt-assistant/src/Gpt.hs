@@ -164,19 +164,23 @@ debugMode = do
       liftIO $ return ()
 
 
-  liftIO $ clearScreen
-  liftIO $ setCursorPosition 0 0
-  liftIO $ cPrint at_info  Cyan 
+  -- liftIO $ clearScreen
+  -- liftIO $ setCursorPosition 0 0
+  -- liftIO $ cPrint at_info  Cyan 
       
   if sl == 0
   then
     do
+      liftIO $ clearScreen
+      liftIO $ setCursorPosition 0 0
+      liftIO $ cPrint at_info  Cyan 
+      
       contentAfile <- liftIO $ readFile agdafile
       liftIO $ appendFile a_log  "#########################  Initial data  #########################\n\n"
       liftIO $ appendFile a_log  contentAfile
       fcon <- liftIO $ fConvInput env
-      liftIO $ cPrint "The following prompt has been sent to GPT chat\n\n" Yellow
-      liftIO $ putStrLn $ fcon ++ "\n\n"
+      -- liftIO $ cPrint "The following prompt has been sent to GPT chat\n\n" Yellow
+      -- liftIO $ putStrLn $ fcon ++ "\n\n"
       liftIO $ appendFile gC_log  at_info
       liftIO $ appendFile gA_log  at_info
       liftIO $ appendFile gA_log (p ++ fcon)
@@ -186,10 +190,10 @@ debugMode = do
       liftIO $ writeFile only_code (fst answareFromGPT)
       liftIO $ appendFile gA_log  (r++(snd answareFromGPT))
       let promptRes = Message {role = "assistant" , content = (snd answareFromGPT)}
-      liftIO $ threadDelay 1000000
-      liftIO $ clearScreen
-      liftIO $ setCursorPosition 0 0     
-      liftIO $ cPrint "The following GPT chat reasponse was received\n\n" Yellow
+      -- liftIO $ threadDelay 1000000
+      -- liftIO $ clearScreen
+      -- liftIO $ setCursorPosition 0 0     
+      liftIO $ cPrint "The following reasponse was received from GPT:\n\n" Yellow
       liftIO $ appendFile agdafile (fst answareFromGPT)
       newAfile <- liftIO $ readFile agdafile
       liftIO  $ writeFile only_code  at_info
@@ -222,11 +226,11 @@ debugMode = do
         Nothing -> do
                    return Nothing
         Just x -> do
-                  liftIO $ threadDelay 3000000
-                  liftIO $ clearScreen
-                  liftIO $ setCursorPosition 0 0
+                  -- liftIO $ threadDelay 3000000
+                  -- liftIO $ clearScreen
+                  -- liftIO $ setCursorPosition 0 0
                   liftIO $ cPrint ("The agda compiler response with the following errors\n\n" ++ x) Red
-                  liftIO $ threadDelay 3000000 
+                  -- liftIO $ threadDelay 3000000 
                   return (Just x)
 
 -- __________ >0
@@ -237,8 +241,8 @@ debugMode = do
       -- liftIO $ threadDelay 3000000
       -- liftIO $ clearScreen
       -- liftIO $ setCursorPosition 0 0
-      liftIO $ cPrint "The following prompt has been sent to GPT chat\n\n" Yellow
-      liftIO $ putStrLn $ rcon ++ "\n\n"
+      -- liftIO $ cPrint "The following prompt has been sent to GPT chat\n\n" Yellow
+      -- liftIO $ putStrLn $ rcon ++ "\n\n"
       liftIO $ appendFile gA_log  ("\n\n"++ at_info)
       liftIO $ appendFile gA_log (p ++ rcon) 
       let rPromptReq = Message {role =  "user", content = rcon}
@@ -250,10 +254,15 @@ debugMode = do
       liftIO  $ writeFile only_code  at_info
       liftIO $ appendFile only_code (fst answareFromGPT)
       let rPromptRes = Message {role = "assistant", content = (snd answareFromGPT)}
-      liftIO $ threadDelay 1000000
+      -- liftIO $ threadDelay 1000000
+      -- liftIO $ clearScreen
+      -- liftIO $ setCursorPosition 0 0
+
       liftIO $ clearScreen
       liftIO $ setCursorPosition 0 0
-      liftIO $ cPrint "The following GPT chat reasponse  was received\n\n" Yellow 
+      liftIO $ cPrint at_info  Cyan 
+      
+      liftIO $ cPrint "The following reasponse was received from GPT:\n\n" Yellow 
       case mode of
         DebugMode -> do
           liftIO $ putStrLn $ snd answareFromGPT ++ "\n\n"
@@ -290,11 +299,10 @@ debugMode = do
         Nothing -> do
                    return Nothing
         Just x -> do
-                  liftIO $ threadDelay 3000000
-                  liftIO $ clearScreen
-                  liftIO $ setCursorPosition 0 0
+                  -- liftIO $ threadDelay 3000000
+                  -- liftIO $ clearScreen
+                  -- liftIO $ setCursorPosition 0 0
                   liftIO $ cPrint ("The agda compiler response with the following errors\n\n" ++ x) Red
-                  liftIO $ threadDelay 3000000
                   return (Just x)
 
 

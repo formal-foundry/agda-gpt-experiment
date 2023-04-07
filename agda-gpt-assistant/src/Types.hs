@@ -109,7 +109,7 @@ readArgs =
       , conF = "config.json" &=help  "this is a config file, it should be in the current directory or * ~/.agda-gpt-assistant * default value for this flag is config.json" &= typFile
       , mode = "Pretty" &= help "Choose one of the operating modes. * Pretty * or\n* Debug *  - which has more details. The default value for this flag is Pretty." &= typ "MODE" &= name "m"
       , maxT = 5 &= help "Set this flag to specify the number of round conversations with ChatGPT. This flag has a default value of 5." &= typ "NUMBER" &= name "l"
-      } &= summary "##################### adga-gpt-assistant #####################\n\nExample: aga -a=Test.agda -t=not : Bool → Bool -c=myConfig.json -m=Pretty -l=15" &= details ["More details on the website https://codecredence.com"]
+      } &= summary "##################### adga-gpt-assistant #####################\n\nBefore start, you have to prepare directory with templates. Directory is available in git repositry * /data/templates *  Copy this dir in your currnet executing dir, or * ~/.agda-gpt-assistant * witch one you need to create first. \n\nExample: aga -a=Test.agda -t=not : Bool → Bool -c=myConfig.json -m=Pretty -l=15" &= details ["More details on the website https://codecredence.ai"]
 
 
 
