@@ -1,10 +1,13 @@
 
- ############## Attempt number:  13  ##############
+ ############## Attempt number:  3  ##############
 
 
 thm : ∀ s m → isFinished (update s m) → ⊥
-thm _ increment p = proj₂ p
-thm _ (initialize _) ()
-thm (counting _) increment p = proj₂ p
-thm (counting _) (initialize _) ()
-thm _ _ ()
+thm s m pf = snd⊥ (case s of 
+                    uninitialized => case m of
+                                        increment => ⊥-elim pf
+                                        initialize x => ⊤-elim pf 
+                    counting x => case m of
+                                        increment => ⊥-elim pf 
+                                        initialize x₁ => ⊤-elim pf
+                    finished => ⊥-elim pf)
