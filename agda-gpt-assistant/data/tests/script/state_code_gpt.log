@@ -1,0 +1,7 @@
+
+ ############## Attempt number:  1  ##############
+
+
+mapEither : {A B C : Set} → (A → C) → (B → C) → Either A B → C
+mapEither f g (left a) = f a
+mapEither f g (right b) = g b
