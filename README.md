@@ -1,4 +1,4 @@
-# agda-gpt-assistant
+# agda-gpt-assistant 
 
 Before start, you have to prepare directory with templates. Directory is
 available in git repositry * /data/templates *  Copy this dir in your currnet
