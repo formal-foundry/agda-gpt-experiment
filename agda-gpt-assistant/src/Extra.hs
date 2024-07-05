@@ -68,11 +68,11 @@ check_promt s = do
   case l of
     True -> return $ "./templates/gpt_"++s++".txt"
     False -> do
-      g <- doesFileExist $ home ++ "/.agda-gpt-assistant/templates/gpt_"++s++".txt"
+      g <- doesFileExist $ home ++ "/.agda-gpt-experiment/templates/gpt_"++s++".txt"
       case g of
-        True -> return  $ home++"/.agda-gpt-assistant/templates/gpt_"++s++".txt"
+        True -> return  $ home++"/.agda-gpt-experiment/templates/gpt_"++s++".txt"
         False -> do
-          cPrint ("I can't find gpt_"++s++".txt, check it in /templates/ or ~/.agda-gpt-assistant/templates\n") Red
+          cPrint ("I can't find gpt_"++s++".txt, check it in /templates/ or ~/.agda-gpt-experiment/templates\n") Red
           putStrLn "--"
           die "Something went wrong, try one more time"
 
@@ -94,11 +94,11 @@ check_config conf = do
   case l of
     True -> return $ conf
     False -> do
-      g <- doesFileExist $ home++"/.agda-gpt-assistant/" ++ conf 
+      g <- doesFileExist $ home++"/.agda-gpt-experiment/" ++ conf 
       case g of
-        True -> return  $ home++"/.agda-gpt-assistant/"++ conf
+        True -> return  $ home++"/.agda-gpt-experiment/"++ conf
         False -> do
-          cPrint ("I can't find " ++ conf ++ ", check it in currnet dir or ~/.agda-gpt-assistant/\n") Red
+          cPrint ("I can't find " ++ conf ++ ", check it in currnet dir or ~/.agda-gpt-experiment/\n") Red
           putStrLn "--"
           die "Something went wrong, try one more time"
 
