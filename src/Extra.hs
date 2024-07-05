@@ -96,7 +96,7 @@ check_config conf = do
     False -> do
       g <- doesFileExist $ home++"/.agda-gpt-experiment/" ++ conf 
       case g of
-        True -> return  $ home++"/.agda-gpt-experiment/"++ conf
+        True -> return  $ home++"/.agda-gbpt-experiment/"++ conf
         False -> do
           cPrint ("I can't find " ++ conf ++ ", check it in currnet dir or ~/.agda-gpt-experiment/\n") Red
           putStrLn "--"
